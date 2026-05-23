@@ -1,4 +1,3 @@
-import time
 import json
 from typing import List
 from product import Product, AvailabilityStatus
