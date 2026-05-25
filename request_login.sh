@@ -1,0 +1,21 @@
+curl -v 'https://retreatman.nztim.com/login' \
+  -H 'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7' \
+  -H 'accept-language: en-US,en;q=0.9,es-US;q=0.8,es;q=0.7' \
+  -H 'cache-control: max-age=0' \
+  -H 'content-type: application/x-www-form-urlencoded' \
+  -b 'retreatman_session=eyJpdiI6InNIQnFlNTgrRXRtVk1jUjlXaVc4YXc9PSIsInZhbHVlIjoiRkJEWlpCMW95c29SNFRIK0dpV2dlRzlBZUdnNnYydWZsOUxVTlpzdFNJMmZPcVBtcEg5T0xBV21QYzYxdFhYTExBU0sxbVlGUElndUFDei9IcGZNVXhWcXBLeCtUdy9wN1huZkdYYkZsQUplTEx5QzVlcWJIZm8xZVMzMlNINi8iLCJtYWMiOiI0NzM2YjZhY2VmMTc2YzZkYzQ5ZDY4NzMwYzZmYWY4MWJhMWIyNTA4YjJlM2RhNmQ4ZDAwMzYzMDZhOTE5ZWYwIiwidGFnIjoiIn0%3D; _pk_id.15.8542=f6d9c034f6b410d8.1779582119.; _pk_ses.15.8542=1' \
+  -H 'dnt: 1' \
+  -H 'origin: https://retreatman.nztim.com' \
+  -H 'priority: u=0, i' \
+  -H 'referer: https://retreatman.nztim.com/login' \
+  -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: document' \
+  -H 'sec-fetch-mode: navigate' \
+  -H 'sec-fetch-site: same-origin' \
+  -H 'sec-fetch-user: ?1' \
+  -H 'upgrade-insecure-requests: 1' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36' \
+  --data-raw '_token=NtvYkdwgz668yMw6HGRyDHl8S7koPd5MyvcZh8R9&email=test%40test.com&password=test&remember=1'
+
