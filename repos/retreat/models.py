@@ -1,11 +1,11 @@
-import services.shoppinglist
+from services.shoppinglist import Product, Amount
 import re
 from pydantic import BaseModel, model_validator
 
 from typing import Literal
 
 
-class Amount(BaseModel):
+class RetreatAmount(BaseModel):
     amount: float
     type: Literal["g", "ml", "each"]
 
@@ -48,14 +48,13 @@ class Amount(BaseModel):
 
 class RetreatProduct(BaseModel):
     name: str
-    amount: Amount
+    amount: RetreatAmount
 
-    def to_service_product(self) -> services.shoppinglist.Product:
-        return services.shoppinglist.Product(
+    def to_product(self) -> Product:
+        return Product(
+            id=self.name,
             name=self.name,
-            amount=services.shoppinglist.Amount(
-                amount=self.amount.amount, type=self.amount.type
-            ),
+            amount=Amount(amount=self.amount.amount, type=self.amount.type),
         )
 
 

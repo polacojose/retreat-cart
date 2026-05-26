@@ -9,5 +9,6 @@ class Amount(BaseModel):
 
 
 class Product(BaseModel):
+    id: str
     name: str
     amount: Amount

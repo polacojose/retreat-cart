@@ -1,12 +1,14 @@
-from bs4 import BeautifulSoup
-from services.shoppinglist import Product
-from repos.retreat.models import RetreatProduct as RetreatProduct
-from repos.retreat.models import Retreat
-from typing import List, Self
 import html
 import re
-from pydantic_settings import SettingsConfigDict, BaseSettings
+from typing import List, Self
+
 import httpx
+from bs4 import BeautifulSoup
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from repos.retreat.models import Retreat
+from repos.retreat.models import RetreatProduct
+from services.shoppinglist import Product
 
 
 class RetreatConfig(BaseSettings):
@@ -66,8 +68,9 @@ class RetreatManager:
             products.append(
                 RetreatProduct.model_validate(
                     {"name": name, "amount": amount}
-                ).to_service_product()
+                ).to_product()
             )
+
         return products
 
     # entry method

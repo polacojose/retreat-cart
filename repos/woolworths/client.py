@@ -1,3 +1,4 @@
+from services.shoppinglist import Product
 from typing import List
 from playwright.async_api import async_playwright
 import asyncio
@@ -27,7 +28,7 @@ class WoolworthsAPI:
         self.__config = WoolworthsConfig()  # ty:ignore[missing-argument]
         self.__sem = asyncio.Semaphore(1)
 
-    async def login(self):
+    async def authenticate(self):
         print("Logging into Woolworths...")
         async with async_playwright() as p:
             browser = await p.firefox.launch(headless=True)
@@ -59,14 +60,14 @@ class WoolworthsAPI:
         print("Logged into Woolworths.")
 
     async def search(
-        self, search_string: str, department: str | None = None
-    ) -> List[WoolWorthsProduct]:
+        self, name_search: str, department_search: str | None = None
+    ) -> List[Product]:
 
         async with httpx.AsyncClient() as client:
             async with self.__sem:
                 items = (
                     await client.get(
-                        url=WoolworthsAPI.__SEARCH_BASE.format(search_string),
+                        url=WoolworthsAPI.__SEARCH_BASE.format(name_search),
                         headers={
                             "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
                             "x-requested-with": "OnlineShopping.WebApp",
@@ -74,26 +75,36 @@ class WoolworthsAPI:
                         timeout=2,
                     )
                 ).json()["products"]["items"]
-                products = [
+                ww_products = [
                     WoolWorthsProduct.model_validate(p) for p in items if "unit" in p
                 ]
 
-                if department is not None:
-                    products = [
+                if department_search is not None:
+                    ww_products = [
                         p
-                        for p in products
+                        for p in ww_products
                         if True
-                        in [department.lower() in d.name.lower() for d in p.departments]
+                        in [
+                            department_search.lower() in d.name.lower()
+                            for d in p.departments
+                        ]
                     ]
+
+                products = [
+                    product
+                    for p in ww_products
+                    if (product := p.to_product()) is not None
+                ]
+
                 return products
 
-    async def add_items_to_cart(self, sku: str, quantity: int):
+    async def add_to_cart(self, id: str, amount: int):
         """sku: 57303"""
         print(
             (
                 await self.__client.post(
                     "https://www.woolworths.co.nz/api/v1/trolleys/my/items",
-                    json={"sku": sku, "quantity": quantity, "pricingUnit": "Each"},
+                    json={"sku": id, "quantity": amount, "pricingUnit": "Each"},
                 )
             ).text
         )

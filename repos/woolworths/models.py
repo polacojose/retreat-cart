@@ -1,8 +1,12 @@
+import services.shoppinglist
 import re
-from typing import Optional, Literal, List
-from pydantic.alias_generators import to_camel
-from pydantic import BaseModel, ConfigDict, model_validator
 from enum import Enum
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic.alias_generators import to_camel
+
+from services.shoppinglist import Product, Amount
 
 
 class Unit(str, Enum):
@@ -89,6 +93,7 @@ class WoolWorthsProduct(BaseModel):
         populate_by_name=True,
         from_attributes=True,
     )
+    sku: str
     name: str
     unit: Unit
     price: Price
@@ -96,3 +101,13 @@ class WoolWorthsProduct(BaseModel):
     size: Size
     availability_status: AvailabilityStatus
     departments: List[Department]
+
+    def to_product(self) -> Product | None:
+        if self.size.cup_measure is not None:
+            return Product(
+                id=self.sku,
+                name=self.name,
+                amount=Amount(
+                    amount=self.size.cup_measure.amount, type=self.size.cup_measure.type
+                ),
+            )
