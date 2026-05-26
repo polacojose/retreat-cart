@@ -1,3 +1,4 @@
+from math import prod
 import asyncio
 import json
 import logging
@@ -77,6 +78,14 @@ async def search_results():
         print(t.result()[0])
 
     await app.state.woolworths.close()
+
+
+@app.get("/grocery_search")
+async def grocery_search(product_name: str):
+    """Searching Woolworths for the specified items."""
+    log.info(f"Searching grocery store for {product_name}...")
+    woolworths = WoolworthsAPI()
+    return await woolworths.search(product_name)
 
 
 # Have an interactive top 10 selection with the ingredients list for each item

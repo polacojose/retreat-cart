@@ -1,7 +1,6 @@
-from repos.retreat.client import config
+from typing import List
 from playwright.async_api import async_playwright
 import asyncio
-from typing import List, Self
 
 import httpx
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -63,25 +62,30 @@ class WoolworthsAPI:
         self, search_string: str, department: str | None = None
     ) -> List[WoolWorthsProduct]:
 
-        async with self.__sem:
-            items = (
-                await self.__client.get(
-                    url=WoolworthsAPI.__SEARCH_BASE.format(search_string),
-                    timeout=2,
-                )
-            ).json()["products"]["items"]
-            products = [
-                WoolWorthsProduct.model_validate(p) for p in items if "unit" in p
-            ]
-
-            if department is not None:
+        async with httpx.AsyncClient() as client:
+            async with self.__sem:
+                items = (
+                    await client.get(
+                        url=WoolworthsAPI.__SEARCH_BASE.format(search_string),
+                        headers={
+                            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+                            "x-requested-with": "OnlineShopping.WebApp",
+                        },
+                        timeout=2,
+                    )
+                ).json()["products"]["items"]
                 products = [
-                    p
-                    for p in products
-                    if True
-                    in [department.lower() in d.name.lower() for d in p.departments]
+                    WoolWorthsProduct.model_validate(p) for p in items if "unit" in p
                 ]
-            return products
+
+                if department is not None:
+                    products = [
+                        p
+                        for p in products
+                        if True
+                        in [department.lower() in d.name.lower() for d in p.departments]
+                    ]
+                return products
 
     async def add_items_to_cart(self, sku: str, quantity: int):
         """sku: 57303"""
