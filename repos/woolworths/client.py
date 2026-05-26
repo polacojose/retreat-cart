@@ -28,7 +28,7 @@ class WoolworthsAPI:
         self.__config = WoolworthsConfig()  # ty:ignore[missing-argument]
         self.__sem = asyncio.Semaphore(1)
 
-    async def authenticate(self):
+    async def authenticate(self, username: str, password: str):
         print("Logging into Woolworths...")
         async with async_playwright() as p:
             browser = await p.firefox.launch(headless=True)
