@@ -52,13 +52,12 @@ async def add_item_to_cart(item_id: str, number: int):
     log.info(f"Adding {number} of {item_id}...")
     grocery_store = await get_auth_grocery()
     await grocery_store.add_to_cart(item_id, number)
-    await app.state.woolworths.close()
     return {}
 
 
 @app.get("/grocery_search", tags=[Tags.Grocery])
 async def grocery_search(product_name: str):
-    """Searching Woolworths for the specified items."""
+    """Searching the grocery store for the specified items."""
 
     log.info(f"Searching grocery store for {product_name}...")
     grocery_store = await get_grocery()
