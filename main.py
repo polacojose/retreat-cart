@@ -1,9 +1,13 @@
+from repos.retreat.models import Retreat
+from typing import List
+from services.shoppinglist import Product
+from pydantic import SecretStr
 import uuid
 from enum import Enum
 import asyncio
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 
 from repos.retreat.client import RetreatManager
 from services.grocery import GroceryStoreCacher, GroceryStoreType
@@ -13,7 +17,7 @@ log = logging.getLogger(__name__)
 
 class Tags(str, Enum):
     Core = "Core"
-    Retreat = "Retreat"
+    Retreat = "Retreat Manager"
     Grocery = "Grocery Store"
 
 
@@ -22,16 +26,21 @@ app = FastAPI()
 
 
 @app.get("/generate_session", tags=[Tags.Core])
-async def generate_session(grocery_store_type: GroceryStoreType, username, password):
+async def generate_session(
+    grocery_store_type: GroceryStoreType, username: str, password: SecretStr
+) -> uuid.UUID:
     """Generates a cached grocery_store session."""
 
-    return await grocery_store_cacher.generate_session(
-        grocery_store_type, username, password
-    )
+    try:
+        return await grocery_store_cacher.generate_session(
+            grocery_store_type, username, password
+        )
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Unable to login: {e}")
 
 
 @app.get("/retreats", tags=[Tags.Retreat])
-async def retreats():
+async def retreats() -> List[Retreat]:
     """Retrieves of list of Retreats from RetreatManager."""
 
     async with RetreatManager() as retreats_manager:
@@ -40,7 +49,7 @@ async def retreats():
 
 
 @app.get("/shopping_list", tags=[Tags.Retreat])
-async def shopping_list(retreat_id: int):
+async def shopping_list(retreat_id: int) -> List[Product]:
     """Displays a retreat's shopping list."""
 
     log.info("Retrieving shopping list...")
@@ -49,17 +58,17 @@ async def shopping_list(retreat_id: int):
 
 
 @app.get("/add_item_to_cart", tags=[Tags.Grocery])
-async def add_item_to_cart(item_id: str, amount: int, session_id: uuid.UUID):
+async def add_item_to_cart(item_id: str, amount: int, session_id: uuid.UUID) -> bool:
     """Adds a number of items to a grocery store."""
 
     log.info(f"Adding {amount} of {item_id}...")
     grocery_store = await grocery_store_cacher.get_session(session_id)
     await grocery_store.add_to_cart(item_id, amount)
-    return {}
+    return True
 
 
 @app.get("/grocery_search", tags=[Tags.Grocery])
-async def grocery_search(product_name: str, session_id: uuid.UUID):
+async def grocery_search(product_name: str, session_id: uuid.UUID) -> List[Product]:
     """Searching the grocery store for the specified items."""
 
     log.info(f"Searching grocery store for {product_name}...")
@@ -68,7 +77,7 @@ async def grocery_search(product_name: str, session_id: uuid.UUID):
 
 
 @app.get("/search_results")
-async def search_results(retreat_id: int, session_id: uuid.UUID):
+async def search_results(retreat_id: int, session_id: uuid.UUID) -> List[Product]:
     """Responsible for pairing a retreat's shopping list with a grocery store's products"""
 
     grocery_store = await grocery_store_cacher.get_session(session_id)

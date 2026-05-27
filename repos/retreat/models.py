@@ -1,4 +1,4 @@
-from services.shoppinglist import Product, Amount
+from services.shoppinglist import Product, Amount, Category, AmountType
 import re
 from pydantic import BaseModel, model_validator
 
@@ -49,12 +49,14 @@ class RetreatAmount(BaseModel):
 class RetreatProduct(BaseModel):
     name: str
     amount: RetreatAmount
+    category: str
 
     def to_product(self) -> Product:
         return Product(
             id=self.name,
             name=self.name,
-            amount=Amount(amount=self.amount.amount, type=self.amount.type),
+            amount=Amount(amount=self.amount.amount, type=AmountType(self.amount.type)),
+            category=Category.best_guess(self.category),
         )
 
 

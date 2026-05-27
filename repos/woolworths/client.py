@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 from services.shoppinglist import Product
 from typing import List
 from playwright.async_api import async_playwright
@@ -9,26 +10,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from repos.woolworths.models import WoolWorthsProduct
 
 
-class WoolworthsConfig(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        env_prefix="woolworths_",
-        extra="ignore",
-    )
-    username: str
-    password: str
-
-
 class WoolworthsAPI:
     __SEARCH_BASE = "https://www.woolworths.co.nz/api/v1/products?target=search&search={}&inStockProductsOnly=true"
     __LOGIN_URL = "https://www.woolworths.co.nz/api/v1/bff/initiate-oidc-signin?redirectUrl=https%3A%2F%2Fwww.woolworths.co.nz%2F"
 
     def __init__(self):
-        self.__config = WoolworthsConfig()  # ty:ignore[missing-argument]
         self.__sem = asyncio.Semaphore(1)
 
-    async def authenticate(self, username: str, password: str):
+    async def authenticate(self, username: str, password: SecretStr):
         print("Logging into Woolworths...")
         async with async_playwright() as p:
             browser = await p.firefox.launch(headless=True)
@@ -36,13 +25,15 @@ class WoolworthsAPI:
             page = await context.new_page()
 
             await page.goto(WoolworthsAPI.__LOGIN_URL)
-            await page.locator("#username").fill(self.__config.username)
+            await page.locator("#username").fill(username)
             async with page.expect_navigation():
                 await page.get_by_role("button", name="Continue").click()
+                await page.wait_for_url("**/login/password**", timeout=5000)
 
-            await page.locator("#password").fill(self.__config.password)
+            await page.locator("#password").fill(password.get_secret_value())
             async with page.expect_navigation():
                 await page.get_by_role("button", name="Sign in").click()
+                await page.wait_for_url("**www.woolworths.co.nz**", timeout=5000)
 
             playwright_cookies = await context.cookies()
             user_agent = await page.evaluate("navigator.userAgent")

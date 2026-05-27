@@ -1,3 +1,4 @@
+import asyncio
 import html
 import re
 from typing import List, Self
@@ -50,24 +51,37 @@ class RetreatManager:
         return retreats
 
     async def get_shopping_list(self, retreat_id: int) -> List[Product]:
-        response_text = (
-            await self.__client.get(
+
+        shopping_response, category_response = await asyncio.gather(
+            self.__client.get(
                 url=f"https://retreatman.nztim.com/retreats/{retreat_id}/shopping",
                 timeout=2,
-            )
-        ).text
+            ),
+            self.__client.get(
+                url="https://retreatman.nztim.com/products",
+                timeout=2,
+            ),
+        )
 
-        soup = BeautifulSoup(response_text, features="html.parser")
-        rows = [r for r in soup.findAll("tr") if len(r.findAll("td")) == 4]
+        soup = BeautifulSoup(category_response.text, features="html.parser")
+        category_rows = {
+            name.get_text().strip(): cat.get_text().strip()
+            for r in soup.find_all("tr")[1:]
+            if (cells := r.find_all("td")) and (name := cells[0]) and (cat := cells[1])
+        }
+        print(category_rows)
+
+        soup = BeautifulSoup(shopping_response.text, features="html.parser")
+        rows = [r for r in soup.find_all("tr") if len(r.findAll("td")) == 4]
 
         products = []
         for row in rows:
-            cells = row.findAll("td")
+            cells = row.find_all("td")
             name = cells[0].get_text().strip()
             amount = cells[2].get_text().strip()
             products.append(
                 RetreatProduct.model_validate(
-                    {"name": name, "amount": amount}
+                    {"name": name, "amount": amount, "category": category_rows[name]}
                 ).to_product()
             )
 

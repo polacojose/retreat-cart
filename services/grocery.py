@@ -1,3 +1,4 @@
+from pydantic import SecretStr
 import uuid
 from repos.woolworths.client import WoolworthsAPI
 from enum import Enum
@@ -28,7 +29,7 @@ class GroceryStoreCacher:
         self.__sem = asyncio.Semaphore(1)
 
     async def generate_session(
-        self, grocery_store_type: GroceryStoreType, username: str, password: str
+        self, grocery_store_type: GroceryStoreType, username: str, password: SecretStr
     ) -> uuid.UUID:
         async with self.__sem:
             match grocery_store_type:

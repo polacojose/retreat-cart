@@ -6,7 +6,7 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, model_validator
 from pydantic.alias_generators import to_camel
 
-from services.shoppinglist import Product, Amount
+from services.shoppinglist import Product, Amount, Category, AmountType
 
 
 class Unit(str, Enum):
@@ -103,11 +103,18 @@ class WoolWorthsProduct(BaseModel):
     departments: List[Department]
 
     def to_product(self) -> Product | None:
+
+        category = Category.Other
+        if len(self.departments) >= 1:
+            category = Category.best_guess(self.departments[0].name)
+
         if self.size.cup_measure is not None:
             return Product(
                 id=self.sku,
                 name=self.name,
                 amount=Amount(
-                    amount=self.size.cup_measure.amount, type=self.size.cup_measure.type
+                    amount=self.size.cup_measure.amount,
+                    type=AmountType(self.size.cup_measure.type),
                 ),
+                category=category,
             )
