@@ -821,45 +821,6 @@ wheels = [
 ]
 
 [[package]]
-name = "python-woolworths-api"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "asyncio" },
-    { name = "bs4" },
-    { name = "fastapi", extra = ["standard"] },
-    { name = "httpx" },
-    { name = "nltk" },
-    { name = "playwright" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "python-dotenv" },
-    { name = "scikit-learn" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "asyncio", specifier = ">=4.0.0" },
-    { name = "bs4", specifier = ">=0.0.2" },
-    { name = "fastapi", extras = ["standard"], specifier = ">=0.136.3" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "nltk", specifier = ">=3.9.4" },
-    { name = "playwright", specifier = ">=1.60.0" },
-    { name = "pydantic", specifier = ">=2.13.4" },
-    { name = "pydantic-settings", specifier = ">=2.14.1" },
-    { name = "python-dotenv", specifier = ">=1.2.2" },
-    { name = "scikit-learn", specifier = ">=1.8.0" },
-]
-
-[package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.0.3" }]
-
-[[package]]
 name = "pyyaml"
 version = "6.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -992,6 +953,45 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/92/73/93d42045302636c91f2e5ef588b65b84b01428f28ec77de256b1dfdfbe5c/regex-2026.5.9-cp314-cp314t-win_amd64.whl", hash = "sha256:ca518ed29c46eecba6010b15f1b9a479314d2de409536e71b6a13aa04e3b8a77", size = 285685, upload-time = "2026-05-09T23:15:15.086Z" },
     { url = "https://files.pythonhosted.org/packages/da/80/35b4c33c804a165a7f55289afda3ea9e3eb6d15800341a2d66455c0f1f30/regex-2026.5.9-cp314-cp314t-win_arm64.whl", hash = "sha256:5e41809d2683fcde7d5a8c87a6567ba1fb1ce0de9f31bff578de00a4b2d76daa", size = 275713, upload-time = "2026-05-09T23:15:16.98Z" },
 ]
+
+[[package]]
+name = "retreat-cart"
+version = "0.2.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "asyncio" },
+    { name = "bs4" },
+    { name = "fastapi", extra = ["standard"] },
+    { name = "httpx" },
+    { name = "nltk" },
+    { name = "playwright" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "scikit-learn" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "asyncio", specifier = ">=4.0.0" },
+    { name = "bs4", specifier = ">=0.0.2" },
+    { name = "fastapi", extras = ["standard"], specifier = ">=0.136.3" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "nltk", specifier = ">=3.9.4" },
+    { name = "playwright", specifier = ">=1.60.0" },
+    { name = "pydantic", specifier = ">=2.13.4" },
+    { name = "pydantic-settings", specifier = ">=2.14.1" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
+    { name = "scikit-learn", specifier = ">=1.8.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=9.0.3" }]
 
 [[package]]
 name = "rich"

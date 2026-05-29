@@ -1,4 +1,4 @@
-from services.shoppinglist import ProductResponse, Amount, Category, Measurement
+from services.shoppinglist import ProductResponse, Category, Measurement
 
 
 def test_product_parse():
@@ -6,7 +6,9 @@ def test_product_parse():
         {
             "id": "test_id",
             "name": "Test Product",
-            "amount": Amount(amount=100, type=Measurement.Gram),
+            "cost": 2,
+            "amount": 100,
+            "measurement": Measurement.Gram,
             "category": "stuff",
         }
     )
@@ -16,14 +18,15 @@ def test_product_parse():
         {
             "id": "test_id",
             "name": "Test Product",
-            "amount": Amount(amount=100, type=Measurement.Gram),
-            "category": "Fruit & Vegetables",
+            "cost": 2,
+            "amount": 100,
+            "measurement": Measurement.Gram,
+            "category": Category.best_guess("Fruits Vegetables"),
         }
     )
     assert product.category == Category.FruitVegetables
 
 
 def test_category_guess():
-
     assert Category.best_guess("Fruit & Veg") == Category.FruitVegetables
     assert Category.best_guess("frozen") == Category.Frozen
