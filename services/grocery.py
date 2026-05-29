@@ -6,14 +6,14 @@ from typing import Any, List, Protocol, Self
 from pydantic import SecretStr
 
 from repos.woolworths.client import WoolworthsAPI
-from services.shoppinglist import Category, ProductResponse
+from services.shoppinglist import Category, ProductResponse, PossibleProductResponse, ProductError
 
 
 class GroceryStore(Protocol):
     async def authenticate(username: str, password: str): ...
     async def close(self): ...
 
-    async def search(self, name_search: str) -> List[ProductResponse]: ...
+    async def search(self, name_search: str) -> List[PossibleProductResponse]: ...
 
     async def add_to_cart(self, id: str, amount: int): ...
 
@@ -58,10 +58,10 @@ class GroceryStoreService:
 
     async def search(
         self, name_search: str, category: Category | None = None
-    ) -> List[ProductResponse]:
+    ) -> List[PossibleProductResponse]:
         products = await self.__grocery_store.search(name_search)
         if category is not None:
-            products = [p for p in products if p.category == category]
+            products = [p for p in products if isinstance(p, ProductError) or (isinstance(p, ProductResponse) and p.category == category)]
         return products
 
     async def add_to_cart(self, id: str, amount: int):

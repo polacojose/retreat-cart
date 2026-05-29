@@ -9,7 +9,7 @@ from services.shoppinglist import (
     ProductResponse,
     Category,
     Measurement,
-    CartParameters,
+    CartParameters, PossibleProductResponse, ProductError,
 )
 
 
@@ -132,7 +132,7 @@ class WoolWorthsProduct(BaseModel):
     availability_status: AvailabilityStatus
     departments: List[Department]
 
-    def to_product(self) -> ProductResponse | None:
+    def to_product(self) -> PossibleProductResponse:
 
         category = Category.Other
         if len(self.departments) >= 1:
@@ -146,17 +146,22 @@ class WoolWorthsProduct(BaseModel):
         if self.price.sale_price is not None:
             price = self.price.sale_price
 
-        if self.size.volume_size is not None:
-            return ProductResponse(
-                id=self.sku,
-                cost=price,
-                name=self.name.strip(),
-                amount=self.size.volume_size.number,
-                measurement=Measurement(self.size.volume_size.measurement),
-                category=category,
-                cart_parameters=CartParameters(
-                    min=self.quantity.min,
-                    max=self.quantity.max,
-                    increment=self.quantity.increment,
-                ),
-            )
+        try:
+            if self.size.volume_size is not None:
+                return ProductResponse(
+                    id=self.sku,
+                    cost=price,
+                    name=self.name.strip(),
+                    amount=self.size.volume_size.number,
+                    measurement=Measurement(self.size.volume_size.measurement),
+                    category=category,
+                    cart_parameters=CartParameters(
+                        min=self.quantity.min,
+                        max=self.quantity.max,
+                        increment=self.quantity.increment,
+                    ),
+                )
+        except Exception as e:
+            return ProductError(error=f"Unable to convert product response: {self}: {e}")
+
+        return ProductError(error=f"Product missing volume size: {self}")

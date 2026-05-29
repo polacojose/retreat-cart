@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional, Self
+from typing import Optional, Self, Union
 
 import nltk
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -88,6 +88,10 @@ class ProductBase(BaseModel):
 class ProductRequest(ProductBase):
     pass
 
+class ProductError(BaseModel):
+    error: str
+
+type PossibleProductResponse = Union[ProductResponse , ProductError]
 
 class ProductResponse(ProductBase):
     cost: float

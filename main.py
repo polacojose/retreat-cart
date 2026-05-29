@@ -10,7 +10,7 @@ from core import log
 from repos.retreat.client import RetreatManager
 from repos.retreat.models import Retreat
 from services.grocery import GroceryStoreCacher, GroceryStoreType, GroceryStoreService
-from services.shoppinglist import Category, ProductResponse, ProductRequest
+from services.shoppinglist import Category, ProductResponse, ProductRequest, PossibleProductResponse
 
 
 class Tags(str, Enum):
@@ -96,7 +96,7 @@ async def grocery_search(
     product_name: str,
     grocery_store_session_id: uuid.UUID,
     category: Optional[Category] = None,
-) -> List[ProductResponse]:
+) -> List[PossibleProductResponse]:
     """Searching the grocery store for the specified items."""
 
     try:

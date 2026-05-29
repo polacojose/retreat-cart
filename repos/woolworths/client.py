@@ -7,7 +7,7 @@ from pydantic import SecretStr
 
 from core import log
 from repos.woolworths.models import WoolWorthsProduct
-from services.shoppinglist import ProductResponse
+from services.shoppinglist import ProductResponse, PossibleProductResponse, ProductError
 
 
 class WoolworthsAPI:
@@ -50,7 +50,7 @@ class WoolworthsAPI:
         self.__client = httpx.AsyncClient(cookies=cookies, headers=headers)
         log.info("Logged into Woolworths.")
 
-    async def search(self, name_search: str) -> List[ProductResponse]:
+    async def search(self, name_search: str) -> List[PossibleProductResponse]:
 
         async with httpx.AsyncClient() as client:
             async with self.__sem:
@@ -64,15 +64,19 @@ class WoolworthsAPI:
                         timeout=2,
                     )
                 ).json()["products"]["items"]
-                ww_products = [
-                    WoolWorthsProduct.model_validate(p) for p in items if "unit" in p
-                ]
 
-                products = [
-                    product
-                    for p in ww_products
-                    if (product := p.to_product()) is not None
-                ]
+                products = []
+
+                for item in items:
+                    if "unit" not in item:
+                        continue
+
+                    try: 
+                        ww_product = WoolWorthsProduct.model_validate(item)
+                    except Exception as e:
+                        products.append(ProductError(error=f"Unable to parse response: {item}: {e}"))
+                    
+                    products.append(ww_product.to_product())
 
                 return products
 
