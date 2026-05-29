@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from repos.retreat.models import Retreat
 from repos.retreat.models import RetreatProduct
-from services.shoppinglist import Product
+from services.shoppinglist import ProductRequest
 
 
 class RetreatConfig(BaseSettings):
@@ -50,7 +50,7 @@ class RetreatManager:
 
         return retreats
 
-    async def get_shopping_list(self, retreat_id: int) -> List[Product]:
+    async def get_shopping_list(self, retreat_id: int) -> List[ProductRequest]:
 
         shopping_response, category_response = await asyncio.gather(
             self.__client.get(
@@ -69,7 +69,6 @@ class RetreatManager:
             for r in soup.find_all("tr")[1:]
             if (cells := r.find_all("td")) and (name := cells[0]) and (cat := cells[1])
         }
-        print(category_rows)
 
         soup = BeautifulSoup(shopping_response.text, features="html.parser")
         rows = [r for r in soup.find_all("tr") if len(r.findAll("td")) == 4]

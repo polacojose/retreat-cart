@@ -1,18 +1,16 @@
-from repos.retreat.models import Retreat
-from typing import List
-from services.shoppinglist import Product
-from pydantic import SecretStr
+import asyncio
 import uuid
 from enum import Enum
-import asyncio
-import logging
+from typing import Annotated, List, Optional
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, Form, HTTPException
+from pydantic import SecretStr
 
+from core import log
 from repos.retreat.client import RetreatManager
-from services.grocery import GroceryStoreCacher, GroceryStoreType
-
-log = logging.getLogger(__name__)
+from repos.retreat.models import Retreat
+from services.grocery import GroceryStoreCacher, GroceryStoreType, GroceryStoreService
+from services.shoppinglist import Category, ProductResponse, ProductRequest
 
 
 class Tags(str, Enum):
@@ -25,9 +23,11 @@ grocery_store_cacher = GroceryStoreCacher()
 app = FastAPI()
 
 
-@app.get("/generate_session", tags=[Tags.Core])
-async def generate_session(
-    grocery_store_type: GroceryStoreType, username: str, password: SecretStr
+@app.post("/generate_grocerstore_session", tags=[Tags.Core])
+async def generate_grocerstore_session(
+    grocery_store_type: GroceryStoreType,
+    username: Annotated[str, Form()],
+    password: Annotated[SecretStr, Form()],
 ) -> uuid.UUID:
     """Generates a cached grocery_store session."""
 
@@ -43,52 +43,94 @@ async def generate_session(
 async def retreats() -> List[Retreat]:
     """Retrieves of list of Retreats from RetreatManager."""
 
-    async with RetreatManager() as retreats_manager:
-        retreats = await retreats_manager.get_retreats()
-        return [r.model_dump() for r in retreats]
+    try:
+        log.info("Getting retreats...")
+        async with RetreatManager() as retreats_manager:
+            retreats = await retreats_manager.get_retreats()
+            return [r.model_dump() for r in retreats]
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve list of retreats: {e}"
+        )
 
 
 @app.get("/shopping_list", tags=[Tags.Retreat])
-async def shopping_list(retreat_id: int) -> List[Product]:
+async def shopping_list(retreat_id: int) -> List[ProductRequest]:
     """Displays a retreat's shopping list."""
 
-    log.info("Retrieving shopping list...")
-    async with RetreatManager() as retreats_manager:
-        return await retreats_manager.get_shopping_list(retreat_id)
+    try:
+        log.info("Retrieving shopping list...")
+        async with RetreatManager() as retreats_manager:
+            return await retreats_manager.get_shopping_list(retreat_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve retreat shopping list: {e}"
+        )
 
 
-@app.get("/add_item_to_cart", tags=[Tags.Grocery])
-async def add_item_to_cart(item_id: str, amount: int, session_id: uuid.UUID) -> bool:
+@app.post("/add_item_to_cart", tags=[Tags.Grocery])
+async def add_item_to_cart(
+    item_id: Annotated[str, Form()],
+    amount: Annotated[int, Form()],
+    grocery_store_session_id: Annotated[uuid.UUID, Form()],
+) -> bool:
     """Adds a number of items to a grocery store."""
 
-    log.info(f"Adding {amount} of {item_id}...")
-    grocery_store = await grocery_store_cacher.get_session(session_id)
-    await grocery_store.add_to_cart(item_id, amount)
-    return True
+    try:
+        log.info(f"Adding {amount} of {item_id}...")
+
+        async with GroceryStoreService(
+            grocery_store_cacher.get_session(grocery_store_session_id)
+        ) as service:
+            await service.add_to_cart(item_id, amount)
+
+        return True
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to add item to grocery store cart: {e}"
+        )
 
 
 @app.get("/grocery_search", tags=[Tags.Grocery])
-async def grocery_search(product_name: str, session_id: uuid.UUID) -> List[Product]:
+async def grocery_search(
+    product_name: str,
+    grocery_store_session_id: uuid.UUID,
+    category: Optional[Category] = None,
+) -> List[ProductResponse]:
     """Searching the grocery store for the specified items."""
 
-    log.info(f"Searching grocery store for {product_name}...")
-    grocery_store = await grocery_store_cacher.get_session(session_id)
-    return await grocery_store.search(product_name)
+    try:
+        log.info(f"Searching grocery store for {product_name}...")
+        async with GroceryStoreService(
+            grocery_store_cacher.get_session(grocery_store_session_id)
+        ) as service:
+            return await service.search(product_name, category)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to search grocery store: {e}"
+        )
 
 
 @app.get("/search_results")
-async def search_results(retreat_id: int, session_id: uuid.UUID) -> List[Product]:
+async def search_results(
+    retreat_id: int, grocery_store_session_id: uuid.UUID
+) -> List[ProductResponse]:
     """Responsible for pairing a retreat's shopping list with a grocery store's products"""
 
-    grocery_store = await grocery_store_cacher.get_session(session_id)
-    log.info("Retrieving shopping list...")
-    async with RetreatManager() as retreats_manager:
-        shopping_list = await retreats_manager.get_shopping_list(retreat_id)
+    try:
+        log.info("Retrieving shopping list...")
+        async with RetreatManager() as retreats_manager:
+            shopping_list = await retreats_manager.get_shopping_list(retreat_id)
 
-    log.info("Searching for items in grocery...")
-    async with asyncio.TaskGroup() as tg:
-        tasks = []
-        for item in shopping_list:
-            tasks.append(tg.create_task(grocery_store.search(item.name)))
+        log.info("Searching for items in grocery...")
+        async with GroceryStoreService(
+            grocery_store_cacher.get_session(grocery_store_session_id)
+        ) as service:
+            async with asyncio.TaskGroup() as tg:
+                tasks = []
+                for item in shopping_list:
+                    tasks.append(tg.create_task(service.search(item.name)))
 
-    return [t.result()[0] for t in tasks]
+        return [t.result()[0] for t in tasks]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to search results: {e}")

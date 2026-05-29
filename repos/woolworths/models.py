@@ -1,12 +1,16 @@
-import services.shoppinglist
 import re
 from enum import Enum
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator, field_validator
 from pydantic.alias_generators import to_camel
 
-from services.shoppinglist import Product, Amount, Category, AmountType
+from services.shoppinglist import (
+    ProductResponse,
+    Category,
+    Measurement,
+    CartParameters,
+)
 
 
 class Unit(str, Enum):
@@ -30,9 +34,9 @@ class Quanity(BaseModel):
     increment: float
 
 
-class CupMeasure(BaseModel):
-    amount: int
-    type: Literal["g", "ml", "each"]
+class VolumeSize(BaseModel):
+    number: int
+    measurement: Literal["g", "ml", "each"]
 
     @model_validator(mode="before")
     @classmethod
@@ -45,23 +49,23 @@ class CupMeasure(BaseModel):
             if not match:
                 raise ValueError(f"Could not parse measurement string: '{value}'")
 
-            raw_amount, raw_unit = match.groups()
-            num = float(raw_amount)
-            unit = raw_unit.lower()
+            raw_number, raw_measurement = match.groups()
+            num = float(raw_number)
+            unit = raw_measurement.lower()
 
             # Normalize units and handle conversions
             if unit in ("g"):
-                return {"amount": int(num), "type": "g"}
+                return {"number": int(num), "measurement": "g"}
             elif unit in ("kg"):
-                return {"amount": int(num * 1000), "type": "g"}
+                return {"number": int(num * 1000), "measurement": "g"}
             elif unit in ("ml"):
-                return {"amount": int(num), "type": "ml"}
+                return {"number": int(num), "measurement": "ml"}
             elif unit in ("l"):
-                return {"amount": int(num * 1000), "type": "ml"}
+                return {"number": int(num * 1000), "measurement": "ml"}
             elif unit in ("ea"):
-                return {"amount": int(num), "type": "each"}
+                return {"number": int(num), "measurement": "each"}
             else:
-                raise ValueError(f"Unsupported unit: '{raw_unit}'")
+                raise ValueError(f"Unsupported unit: '{raw_measurement}'")
 
         raise ValueError("Input must be a string or a dictionary")
 
@@ -74,7 +78,16 @@ class Size(BaseModel):
     )
     cup_list_price: float
     cup_price: float
-    cup_measure: Optional[CupMeasure] = None
+    volume_size: Optional[VolumeSize] = None
+
+    @field_validator("volume_size", mode="before")
+    @classmethod
+    def eval(cls, value: str) -> str | None:
+        value = value.strip()
+        if value == "":
+            return None
+        else:
+            return value.replace("per ", "1").replace("min order ", "")
 
 
 class AvailabilityStatus(str, Enum):
@@ -85,6 +98,23 @@ class AvailabilityStatus(str, Enum):
 
 class Department(BaseModel):
     name: str
+
+
+category_map = {
+    "Fruit & Veg": Category.FruitVegetables,
+    "Meat & Poultry": Category.MeatPoultrySeafood,
+    "Fish & Seafood": Category.MeatPoultrySeafood,
+    "Fridge & Deli": Category.FridgeDeliEggs,
+    "Bakery": Category.Bakery,
+    "Frozen": Category.Frozen,
+    "Pantry": Category.Pantry,
+    "Beer & Wine": Category.BeerWineCider,
+    "Drinks": Category.HotColdDrinks,
+    "Health & Body": Category.HealthBody,
+    "Household": Category.HouseholdCleaning,
+    "Baby & Child": Category.BabyToddler,
+    "Pet": Category.Pets,
+}
 
 
 class WoolWorthsProduct(BaseModel):
@@ -102,19 +132,31 @@ class WoolWorthsProduct(BaseModel):
     availability_status: AvailabilityStatus
     departments: List[Department]
 
-    def to_product(self) -> Product | None:
+    def to_product(self) -> ProductResponse | None:
 
         category = Category.Other
         if len(self.departments) >= 1:
-            category = Category.best_guess(self.departments[0].name)
+            cat_name = self.departments[0].name.strip()
+            if cat_name in category_map:
+                category = category_map[cat_name]
+            else:
+                category = Category.best_guess(cat_name)
 
-        if self.size.cup_measure is not None:
-            return Product(
+        price = self.price.original_price
+        if self.price.sale_price is not None:
+            price = self.price.sale_price
+
+        if self.size.volume_size is not None:
+            return ProductResponse(
                 id=self.sku,
-                name=self.name,
-                amount=Amount(
-                    amount=self.size.cup_measure.amount,
-                    type=AmountType(self.size.cup_measure.type),
-                ),
+                cost=price,
+                name=self.name.strip(),
+                amount=self.size.volume_size.number,
+                measurement=Measurement(self.size.volume_size.measurement),
                 category=category,
+                cart_parameters=CartParameters(
+                    min=self.quantity.min,
+                    max=self.quantity.max,
+                    increment=self.quantity.increment,
+                ),
             )

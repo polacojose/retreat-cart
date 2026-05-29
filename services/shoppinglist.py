@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Self
+from typing import Optional, Self
 
 import nltk
 from nltk.stem.wordnet import WordNetLemmatizer
@@ -19,15 +19,10 @@ def clean_text(text):
     return " ".join([lemmatizer.lemmatize(word) for word in words])
 
 
-class AmountType(str, Enum):
+class Measurement(str, Enum):
     Gram = "g"
     Milliliters = "ml"
     Each = "each"
-
-
-class Amount(BaseModel):
-    amount: float
-    type: AmountType
 
 
 class Category(str, Enum):
@@ -68,11 +63,35 @@ categories = [c for c in Category]
 category_vectors = vectorizer.fit_transform([clean_text(c.value) for c in categories])
 
 
-class Product(BaseModel):
+class CartParameters(BaseModel):
+    min: float
+    max: float
+    increment: float
+
+
+class ProductBase(BaseModel):
     id: str
     name: str
-    amount: Amount
     category: Category
+    amount: float
+    measurement: Measurement
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def eval(cls, value: str) -> Category:
+        if value in Category:
+            return Category(value)
+        else:
+            return Category.Other
+
+
+class ProductRequest(ProductBase):
+    pass
+
+
+class ProductResponse(ProductBase):
+    cost: float
+    cart_parameters: Optional[CartParameters] = None
 
     @field_validator("category", mode="before")
     @classmethod

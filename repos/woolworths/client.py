@@ -1,13 +1,13 @@
-from pydantic import SecretStr
-from services.shoppinglist import Product
-from typing import List
-from playwright.async_api import async_playwright
 import asyncio
+from typing import List
 
 import httpx
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from playwright.async_api import async_playwright
+from pydantic import SecretStr
 
+from core import log
 from repos.woolworths.models import WoolWorthsProduct
+from services.shoppinglist import ProductResponse
 
 
 class WoolworthsAPI:
@@ -18,7 +18,7 @@ class WoolworthsAPI:
         self.__sem = asyncio.Semaphore(1)
 
     async def authenticate(self, username: str, password: SecretStr):
-        print("Logging into Woolworths...")
+        log.info("Logging into Woolworths...")
         async with async_playwright() as p:
             browser = await p.firefox.launch(headless=True)
             context = await browser.new_context()
@@ -48,11 +48,9 @@ class WoolworthsAPI:
         }
 
         self.__client = httpx.AsyncClient(cookies=cookies, headers=headers)
-        print("Logged into Woolworths.")
+        log.info("Logged into Woolworths.")
 
-    async def search(
-        self, name_search: str, department_search: str | None = None
-    ) -> List[Product]:
+    async def search(self, name_search: str) -> List[ProductResponse]:
 
         async with httpx.AsyncClient() as client:
             async with self.__sem:
@@ -70,17 +68,6 @@ class WoolworthsAPI:
                     WoolWorthsProduct.model_validate(p) for p in items if "unit" in p
                 ]
 
-                if department_search is not None:
-                    ww_products = [
-                        p
-                        for p in ww_products
-                        if True
-                        in [
-                            department_search.lower() in d.name.lower()
-                            for d in p.departments
-                        ]
-                    ]
-
                 products = [
                     product
                     for p in ww_products
@@ -91,7 +78,7 @@ class WoolworthsAPI:
 
     async def add_to_cart(self, id: str, amount: int):
         """sku: 57303"""
-        print(
+        log.info(
             (
                 await self.__client.post(
                     "https://www.woolworths.co.nz/api/v1/trolleys/my/items",
