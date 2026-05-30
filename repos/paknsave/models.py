@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Callable, List, Literal, Optional
+from typing import List, Literal, Optional
 
 from pydantic import (
     BaseModel,
@@ -69,18 +69,6 @@ class Measure(BaseModel):
         raise ValueError("Input must be a string or a dictionary")
 
 
-def invalid_to_none(v: Any, handler: Callable[[Any], Any]) -> Any:
-    try:
-        return handler(v)
-    except Exception:
-        return None
-
-
-class Availability(str, Enum):
-    in_store = "IN_STORE"
-    online = "ONLINE"
-
-
 class VariableWeight(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -120,18 +108,15 @@ class PaknSaveProduct(BaseModel):
     )
     product_id: str
     name: str
-    availability: List[Availability]
     single_price: SinglePrice
     variable_weight: Optional[VariableWeight] = None
     category_trees: List[dict[str, str]]
 
     def to_product(self) -> PossibleProductResponse:
+
         try:
-            return ProductResponse(
-                id=self.product_id,
-                cost_per_unit=self.single_price.price / 100.0,
-                name=self.name.strip(),
-                value=Value(
+            value = (
+                Value(
                     cost_per=self.single_price.comparative_price.price_per_unit / 100.0,
                     number=self.single_price.comparative_price.unit_quantity
                     * self.single_price.comparative_price.unit_quantity_uom.number,
@@ -140,14 +125,25 @@ class PaknSaveProduct(BaseModel):
                     ),
                 )
                 if self.single_price.comparative_price
-                else None,
-                category=Category.best_guess(self.category_trees[0]["level0"]),
-                cart_parameters=CartParameters(
+                else None
+            )
+
+            cart_parameters = (
+                CartParameters(
                     min=self.variable_weight.min_order_quantity,
                     increment=self.variable_weight.average_weight,
                 )
                 if self.variable_weight
-                else None,
+                else None
+            )
+
+            return ProductResponse(
+                id=self.product_id,
+                cost_per_unit=self.single_price.price / 100.0,
+                name=self.name.strip(),
+                value=value,
+                category=Category.best_guess(self.category_trees[0]["level0"]),
+                cart_parameters=cart_parameters,
             )
         except Exception as e:
             return ProductError(
