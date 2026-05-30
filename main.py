@@ -119,8 +119,6 @@ async def grocery_search(
                 gs = WoolworthsAPI()
             case GroceryStoreType.PaknSave:
                 gs = PaknSaveAPI()
-            case _:
-                return []
 
         async with GroceryStoreService(gs) as service:
             return await service.search(product_name, category)

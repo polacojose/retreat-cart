@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import List, Literal, Optional
 
 from pydantic import (
@@ -17,27 +16,6 @@ from services.shoppinglist import (
     ProductResponse,
     Value,
 )
-
-
-class Unit(str, Enum):
-    KG = "Kg"
-    EACH = "Each"
-
-
-class Price(BaseModel):
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
-    original_price: float
-    sale_price: Optional[float]
-
-
-class Quanity(BaseModel):
-    min: float
-    max: float
-    increment: float
 
 
 class Measure(BaseModel):
@@ -72,8 +50,6 @@ class Measure(BaseModel):
 class VariableWeight(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
     )
     min_order_quantity: int
     average_weight: int
@@ -82,8 +58,6 @@ class VariableWeight(BaseModel):
 class ComparativePrice(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
     )
     price_per_unit: int
     unit_quantity: int
@@ -93,8 +67,6 @@ class ComparativePrice(BaseModel):
 class SinglePrice(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
     )
     price: int
     comparative_price: Optional[ComparativePrice] = None
@@ -103,8 +75,6 @@ class SinglePrice(BaseModel):
 class PaknSaveProduct(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
     )
     product_id: str
     name: str

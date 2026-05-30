@@ -1,23 +1,22 @@
 import re
 from enum import Enum
-from typing import List, Literal, Optional, Annotated, Callable, Any
+from typing import Annotated, Any, Callable, List, Literal, Optional
 
 from pydantic import (
     BaseModel,
     ConfigDict,
-    model_validator,
-    field_validator,
     WrapValidator,
+    field_validator,
+    model_validator,
 )
 from pydantic.alias_generators import to_camel
 
 from services.shoppinglist import (
-    ProductResponse,
-    Category,
-    Measurement,
     CartParameters,
+    Category,
     PossibleProductResponse,
     ProductError,
+    ProductResponse,
 )
 
 
@@ -29,8 +28,6 @@ class Unit(str, Enum):
 class Price(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
     )
     original_price: float
     sale_price: Optional[float]
@@ -88,8 +85,6 @@ def invalid_to_none(v: Any, handler: Callable[[Any], Any]) -> Any:
 class Size(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
     )
     cup_list_price: float
     cup_price: float
@@ -136,8 +131,6 @@ category_map = {
 class WoolworthsProduct(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
     )
     sku: str
     name: str
@@ -164,8 +157,6 @@ class WoolworthsProduct(BaseModel):
                     id=self.sku,
                     cost_per_unit=self.size.cup_price / self.size.cup_measure.number,
                     name=self.name.strip(),
-                    amount=None,
-                    measurement=Measurement(self.size.cup_measure.measurement),
                     category=category,
                     cart_parameters=CartParameters(
                         min=self.quantity.min,
