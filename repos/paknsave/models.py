@@ -54,19 +54,17 @@ class Measure(BaseModel):
             num = float(1)
             unit = value.lower()
 
-            # Normalize units and handle conversions
-            if unit in ("g"):
-                return {"number": int(num), "measurement": "g"}
-            elif unit in ("kg"):
-                return {"number": int(num * 1000), "measurement": "g"}
-            elif unit in ("ml"):
-                return {"number": int(num), "measurement": "ml"}
-            elif unit in ("l"):
-                return {"number": int(num * 1000), "measurement": "ml"}
-            elif unit in ("ea"):
-                return {"number": int(num), "measurement": "each"}
-            else:
-                raise ValueError(f"Unsupported unit: '{value}'")
+            match unit:
+                case "g":
+                    return {"number": int(num), "measurement": "g"}
+                case "kg":
+                    return {"number": int(num * 1000), "measurement": "g"}
+                case "ml":
+                    return {"number": int(num), "measurement": "ml"}
+                case "l":
+                    return {"number": int(num * 1000), "measurement": "ml"}
+                case _:
+                    raise ValueError(f"Unsupported unit: '{value}'")
 
         raise ValueError("Input must be a string or a dictionary")
 
