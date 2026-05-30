@@ -1,31 +1,56 @@
 import asyncio
 import uuid
 from enum import Enum
-from typing import Any, List, Protocol, Self
+from tkinter.tix import Form
+from typing import Annotated, Any, List, Literal, Protocol, Self, Union, cast
 
-from pydantic import SecretStr
+from pydantic import BaseModel, Field, SecretStr, TypeAdapter
 
+from repos.paknsave.client import PaknSaveAPI
 from repos.woolworths.client import WoolworthsAPI
 from services.shoppinglist import (
     Category,
-    ProductResponse,
     PossibleProductResponse,
     ProductError,
+    ProductResponse,
 )
 
 
 class GroceryStore(Protocol):
-    async def authenticate(self, username: str, password: SecretStr): ...
-    async def close(self): ...
+    async def authenticated_client(self, username: str, password: SecretStr): ...
+    async def public_client(self): ...
 
     async def search(self, name_search: str) -> List[PossibleProductResponse]: ...
-
     async def add_to_cart(self, id: str, amount: int): ...
+
+    async def close(self): ...
 
 
 class GroceryStoreType(str, Enum):
     Woolworths = "woolworths"
     PaknSave = "paknsave"
+
+
+class SessionType(str, Enum):
+    Authenticated = "authenticated"
+    Public = "public"
+
+
+class PublicSession(BaseModel):
+    session_type: Literal[SessionType.Public]
+
+
+class AuthenticatedSession(BaseModel):
+    session_type: Literal[SessionType.Authenticated]
+    username: Annotated[str, Form()]
+    password: Annotated[SecretStr, Form()]
+
+
+# Create a Union type discriminated by the "notification_type" field
+SessionRequest = Annotated[
+    Union[PublicSession, AuthenticatedSession], Field(discriminator="session_type")
+]
+session_request_adapter = TypeAdapter(SessionRequest)
 
 
 class GroceryStoreCacher:
@@ -34,17 +59,25 @@ class GroceryStoreCacher:
         self.__sem = asyncio.Semaphore(1)
 
     async def generate_session(
-        self, grocery_store_type: GroceryStoreType, username: str, password: SecretStr
+        self, grocery_store_type: GroceryStoreType, request: SessionRequest
     ) -> uuid.UUID:
         async with self.__sem:
             match grocery_store_type:
                 case GroceryStoreType.Woolworths:
                     grocery_store = WoolworthsAPI()
-                    await grocery_store.authenticate(username, password)
+                case GroceryStoreType.PaknSave:
+                    grocery_store = PaknSaveAPI()
                 case _:
                     raise ValueError(
                         f"Invalid GroceryStoryType ({grocery_store_type}) provided."
                     )
+
+            if isinstance(request, PublicSession):
+                await cast(GroceryStore, grocery_store).public_client()
+            else:
+                await cast(GroceryStore, grocery_store).authenticated_client(
+                    request.username, request.password
+                )
 
             id = uuid.uuid4()
             self.__cache[id] = grocery_store
@@ -82,4 +115,5 @@ class GroceryStoreService:
         return self
 
     async def __aexit__(self, *exc: Any):
-        await self.__grocery_store.close()
+        pass
+        # await self.__grocery_store.close()

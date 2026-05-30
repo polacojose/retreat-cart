@@ -41,6 +41,8 @@ class Measure(BaseModel):
                     return {"number": int(num), "measurement": "ml"}
                 case "l":
                     return {"number": int(num * 1000), "measurement": "ml"}
+                case "ea":
+                    return {"number": int(num), "measurement": "each"}
                 case _:
                     raise ValueError(f"Unsupported unit: '{value}'")
 

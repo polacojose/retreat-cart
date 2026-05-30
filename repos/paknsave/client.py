@@ -46,7 +46,7 @@ class PaknSaveAPI:
     def __init__(self):
         self.__sem = asyncio.Semaphore(1)
 
-    async def authenticate(self, username: str, password: SecretStr):
+    async def authenticated_client(self, username: str, password: SecretStr):
         log.info("Logging into PaknSave...")
         async with async_playwright() as p:
             browser = await p.firefox.launch(headless=True)
@@ -79,12 +79,14 @@ class PaknSaveAPI:
         self.__client = httpx.AsyncClient(cookies=cookies, headers=headers)
         log.info("Logged into PaknSave.")
 
+    async def public_client(self):
+        self.__client = await PaknSaveAPIClient().authenticate()
+
     async def search(self, name_search: str) -> List[PossibleProductResponse]:
         async with self.__sem:
-            client = await PaknSaveAPIClient().authenticate()
             items = (
                 (
-                    await client.post(
+                    await self.__client.post(
                         url=PaknSaveAPI.__SEARCH_BASE.format(name_search),
                         headers={
                             "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
@@ -134,5 +136,4 @@ class PaknSaveAPI:
 
     # exit method
     async def close(self):
-        if hasattr(self, "__client"):
-            await self.__client.aclose()
+        await self.__client.aclose()

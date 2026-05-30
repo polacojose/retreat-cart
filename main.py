@@ -1,20 +1,20 @@
+from pydantic import SecretStr, BaseModel
 import asyncio
 import uuid
 from enum import Enum
 from typing import Annotated, List, Optional
 
-from fastapi import FastAPI, Form, HTTPException
-from pydantic import SecretStr
+from fastapi import FastAPI, Form, HTTPException, Depends
 
 from core import log
-from repos.paknsave.client import PaknSaveAPI
 from repos.retreat.client import RetreatManager
 from repos.retreat.models import Retreat
-from repos.woolworths.client import WoolworthsAPI
 from services.grocery import (
     GroceryStoreCacher,
     GroceryStoreService,
     GroceryStoreType,
+    SessionType,
+    session_request_adapter,
 )
 from services.shoppinglist import (
     Category,
@@ -33,17 +33,51 @@ grocery_store_cacher = GroceryStoreCacher()
 app = FastAPI()
 
 
+class SessionParams(BaseModel):
+    grocery_store_type: GroceryStoreType
+    session_type: SessionType
+    username: Optional[Annotated[str, Form()]] = None
+    password: Optional[Annotated[SecretStr, Form()]] = None
+
+
+def validate_session_params(
+    grocery_store_type: GroceryStoreType,
+    session_type: SessionType,
+    username: Optional[Annotated[str, Form()]] = None,
+    password: Optional[Annotated[SecretStr, Form()]] = None,
+) -> SessionParams:
+    if session_type == SessionType.Authenticated and (
+        username is None or password is None
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Username and Password are required for authenticated sessions.",
+        )
+
+    return SessionParams(
+        grocery_store_type=grocery_store_type,
+        session_type=session_type,
+        username=username,
+        password=password,
+    )
+
+
 @app.post("/generate_grocerstore_session", tags=[Tags.Core])
 async def generate_grocerstore_session(
-    grocery_store_type: GroceryStoreType,
-    username: Annotated[str, Form()],
-    password: Annotated[SecretStr, Form()],
+    params: SessionParams = Depends(validate_session_params),
 ) -> uuid.UUID:
     """Generates a cached grocery_store session."""
 
     try:
         return await grocery_store_cacher.generate_session(
-            grocery_store_type, username, password
+            params.grocery_store_type,
+            session_request_adapter.validate_python(
+                {
+                    "session_type": params.session_type,
+                    "username": params.username,
+                    "password": params.password,
+                }
+            ),
         )
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Unable to login: {e}")
@@ -104,7 +138,7 @@ async def add_item_to_cart(
 @app.get("/grocery_search", tags=[Tags.Grocery])
 async def grocery_search(
     product_name: str,
-    grocery_store: GroceryStoreType,
+    grocery_store_session_id: uuid.UUID,
     category: Optional[Category] = None,
 ) -> List[PossibleProductResponse]:
     """Searching the grocery store for the specified items."""
@@ -112,14 +146,11 @@ async def grocery_search(
     try:
         log.info(f"Searching grocery store for {product_name}...")
 
-        match grocery_store:
-            case GroceryStoreType.Woolworths:
-                gs = WoolworthsAPI()
-            case GroceryStoreType.PaknSave:
-                gs = PaknSaveAPI()
-
-        async with GroceryStoreService(gs) as service:
+        async with GroceryStoreService(
+            grocery_store_cacher.get_session(grocery_store_session_id)
+        ) as service:
             return await service.search(product_name, category)
+
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Failed to search grocery store: {e}"

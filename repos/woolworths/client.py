@@ -17,7 +17,7 @@ class WoolworthsAPI:
     def __init__(self):
         self.__sem = asyncio.Semaphore(1)
 
-    async def authenticate(self, username: str, password: SecretStr):
+    async def authenticated_client(self, username: str, password: SecretStr):
         log.info("Logging into Woolworths...")
         async with async_playwright() as p:
             browser = await p.firefox.launch(headless=True)
@@ -50,38 +50,46 @@ class WoolworthsAPI:
         self.__client = httpx.AsyncClient(cookies=cookies, headers=headers)
         log.info("Logged into Woolworths.")
 
+    async def public_client(self):
+        self.__client = httpx.AsyncClient(
+            headers={
+                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+                "x-requested-with": "OnlineShopping.WebApp",
+            }
+        )
+        log.info("Logged into Woolworths.")
+
     async def search(self, name_search: str) -> List[PossibleProductResponse]:
         async with self.__sem:
-            async with httpx.AsyncClient() as client:
-                items = (
-                    await client.get(
-                        url=WoolworthsAPI.__SEARCH_BASE.format(name_search),
-                        headers={
-                            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-                            "x-requested-with": "OnlineShopping.WebApp",
-                        },
-                        timeout=2,
-                    )
-                ).json()["products"]["items"]
+            items = (
+                await self.__client.get(
+                    url=WoolworthsAPI.__SEARCH_BASE.format(name_search),
+                    headers={
+                        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+                        "x-requested-with": "OnlineShopping.WebApp",
+                    },
+                    timeout=2,
+                )
+            ).json()["products"]["items"]
 
-                products = []
+            products = []
 
-                for item in items:
-                    if "unit" not in item:
-                        continue
+            for item in items:
+                if "unit" not in item:
+                    continue
 
-                    try:
-                        ww_product = WoolworthsProduct.model_validate(item)
-                        products.append(ww_product.to_product())
-                    except Exception as e:
-                        products.append(
-                            ProductError(
-                                message=f"Unable to parse response: {item}",
-                                exception_error_message=str(e),
-                            )
+                try:
+                    ww_product = WoolworthsProduct.model_validate(item)
+                    products.append(ww_product.to_product())
+                except Exception as e:
+                    products.append(
+                        ProductError(
+                            message=f"Unable to parse response: {item}",
+                            exception_error_message=str(e),
                         )
+                    )
 
-                return products
+            return products
 
     async def add_to_cart(self, id: str, amount: int):
         """sku: 57303"""
@@ -96,5 +104,4 @@ class WoolworthsAPI:
 
     # exit method
     async def close(self):
-        if hasattr(self, "__client"):
-            await self.__client.aclose()
+        await self.__client.aclose()
