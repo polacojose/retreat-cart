@@ -131,7 +131,7 @@ async def grocery_search(
 @app.get("/search_results")
 async def search_results(
     retreat_id: int, grocery_store_session_id: uuid.UUID
-) -> List[ProductResponse]:
+) -> List[PossibleProductResponse]:
     """Responsible for pairing a retreat's shopping list with a grocery store's products"""
 
     try:
