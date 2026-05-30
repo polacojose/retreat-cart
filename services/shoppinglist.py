@@ -25,6 +25,10 @@ class Measurement(str, Enum):
     Each = "each"
 
 
+# Initialize category vector for rapid repeated use.
+vectorizer = TfidfVectorizer(stop_words="english")
+
+
 class Category(str, Enum):
     FruitVegetables = "Fruits Vegetables"
     MeatPoultrySeafood = "Meat Poultry Seafood"
@@ -57,24 +61,20 @@ class Category(str, Enum):
         return max_category  # ty:ignore[invalid-return-type]
 
 
-# Initialize category vector for rapid repeated use.
-vectorizer = TfidfVectorizer(stop_words="english")
 categories = [c for c in Category]
 category_vectors = vectorizer.fit_transform([clean_text(c.value) for c in categories])
 
 
 class CartParameters(BaseModel):
-    min: float
-    max: float
-    increment: float
+    min: Optional[float] = None
+    max: Optional[float] = None
+    increment: Optional[float] = None
 
 
 class ProductBase(BaseModel):
     id: str
     name: str
     category: Category
-    amount: float
-    measurement: Measurement
 
     @field_validator("category", mode="before")
     @classmethod
@@ -86,15 +86,27 @@ class ProductBase(BaseModel):
 
 
 class ProductRequest(ProductBase):
-    pass
+    amount: Optional[float] = None
+    measurement: Measurement
+
 
 class ProductError(BaseModel):
-    error: str
+    message: str
+    exception_error_message: Optional[str] = None
 
-type PossibleProductResponse = Union[ProductResponse , ProductError]
+
+type PossibleProductResponse = Union[ProductResponse, ProductError]
+
+
+class Value(BaseModel):
+    cost_per: float
+    number: float
+    measure: Measurement
+
 
 class ProductResponse(ProductBase):
-    cost: float
+    cost_per_unit: float
+    value: Optional[Value] = None
     cart_parameters: Optional[CartParameters] = None
 
     @field_validator("category", mode="before")

@@ -1,3 +1,5 @@
+from repos.paknsave.client import PaknSaveAPI
+from repos.woolworths.client import WoolworthsAPI
 import asyncio
 import uuid
 from enum import Enum
@@ -9,8 +11,18 @@ from pydantic import SecretStr
 from core import log
 from repos.retreat.client import RetreatManager
 from repos.retreat.models import Retreat
-from services.grocery import GroceryStoreCacher, GroceryStoreType, GroceryStoreService
-from services.shoppinglist import Category, ProductResponse, ProductRequest, PossibleProductResponse
+from services.grocery import (
+    GroceryStoreCacher,
+    GroceryStoreType,
+    GroceryStoreService,
+    GroceryStore,
+)
+from services.shoppinglist import (
+    Category,
+    ProductResponse,
+    ProductRequest,
+    PossibleProductResponse,
+)
 
 
 class Tags(str, Enum):
@@ -94,16 +106,23 @@ async def add_item_to_cart(
 @app.get("/grocery_search", tags=[Tags.Grocery])
 async def grocery_search(
     product_name: str,
-    grocery_store_session_id: uuid.UUID,
+    grocery_store: GroceryStoreType,
     category: Optional[Category] = None,
 ) -> List[PossibleProductResponse]:
     """Searching the grocery store for the specified items."""
 
     try:
         log.info(f"Searching grocery store for {product_name}...")
-        async with GroceryStoreService(
-            grocery_store_cacher.get_session(grocery_store_session_id)
-        ) as service:
+
+        match grocery_store:
+            case GroceryStoreType.Woolworths:
+                gs = WoolworthsAPI()
+            case GroceryStoreType.PaknSave:
+                gs = PaknSaveAPI()
+            case _:
+                return []
+
+        async with GroceryStoreService(gs) as service:
             return await service.search(product_name, category)
     except Exception as e:
         raise HTTPException(

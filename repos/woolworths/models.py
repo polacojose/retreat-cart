@@ -1,15 +1,23 @@
 import re
 from enum import Enum
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Annotated, Callable, Any
 
-from pydantic import BaseModel, ConfigDict, model_validator, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    model_validator,
+    field_validator,
+    WrapValidator,
+)
 from pydantic.alias_generators import to_camel
 
 from services.shoppinglist import (
     ProductResponse,
     Category,
     Measurement,
-    CartParameters, PossibleProductResponse, ProductError,
+    CartParameters,
+    PossibleProductResponse,
+    ProductError,
 )
 
 
@@ -34,7 +42,7 @@ class Quanity(BaseModel):
     increment: float
 
 
-class VolumeSize(BaseModel):
+class Measure(BaseModel):
     number: int
     measurement: Literal["g", "ml", "each"]
 
@@ -70,6 +78,13 @@ class VolumeSize(BaseModel):
         raise ValueError("Input must be a string or a dictionary")
 
 
+def invalid_to_none(v: Any, handler: Callable[[Any], Any]) -> Any:
+    try:
+        return handler(v)
+    except Exception:
+        return None
+
+
 class Size(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
@@ -78,9 +93,10 @@ class Size(BaseModel):
     )
     cup_list_price: float
     cup_price: float
-    volume_size: Optional[VolumeSize] = None
+    cup_measure: Annotated[Optional[Measure], WrapValidator(invalid_to_none)] = None
+    volume_size: Annotated[Optional[Measure], WrapValidator(invalid_to_none)] = None
 
-    @field_validator("volume_size", mode="before")
+    @field_validator("volume_size", "cup_measure", mode="before")
     @classmethod
     def eval(cls, value: str) -> str | None:
         value = value.strip()
@@ -117,7 +133,7 @@ category_map = {
 }
 
 
-class WoolWorthsProduct(BaseModel):
+class WoolworthsProduct(BaseModel):
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
@@ -142,18 +158,14 @@ class WoolWorthsProduct(BaseModel):
             else:
                 category = Category.best_guess(cat_name)
 
-        price = self.price.original_price
-        if self.price.sale_price is not None:
-            price = self.price.sale_price
-
         try:
-            if self.size.volume_size is not None:
+            if self.size.cup_measure is not None:
                 return ProductResponse(
                     id=self.sku,
-                    cost=price,
+                    cost_per_unit=self.size.cup_price / self.size.cup_measure.number,
                     name=self.name.strip(),
-                    amount=self.size.volume_size.number,
-                    measurement=Measurement(self.size.volume_size.measurement),
+                    amount=None,
+                    measurement=Measurement(self.size.cup_measure.measurement),
                     category=category,
                     cart_parameters=CartParameters(
                         min=self.quantity.min,
@@ -162,6 +174,9 @@ class WoolWorthsProduct(BaseModel):
                     ),
                 )
         except Exception as e:
-            return ProductError(error=f"Unable to convert product response: {self}: {e}")
+            return ProductError(
+                message=f"Unable to convert product response: {self}",
+                exception_error_message=str(e),
+            )
 
-        return ProductError(error=f"Product missing volume size: {self}")
+        return ProductError(message=f"Product missing measure size: {self}")
