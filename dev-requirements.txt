@@ -13,6 +13,8 @@ anyio==4.13.0
     #   watchfiles
 asyncio==4.0.0
     # via retreat-cart
+authlib==1.7.2
+    # via retreat-cart
 beautifulsoup4==4.14.3
     # via bs4
 bs4==0.0.2
@@ -22,6 +24,8 @@ certifi==2026.5.20
     #   httpcore
     #   httpx
     #   sentry-sdk
+cffi==2.0.0 ; platform_python_implementation != 'PyPy'
+    # via cryptography
 click==8.4.1
     # via
     #   nltk
@@ -34,6 +38,10 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   pytest
     #   tqdm
     #   uvicorn
+cryptography==48.0.0
+    # via
+    #   authlib
+    #   joserfc
 detect-installer==0.1.0
     # via fastapi-cloud-cli
 dnspython==2.8.0
@@ -80,6 +88,8 @@ joblib==1.5.3
     # via
     #   nltk
     #   scikit-learn
+joserfc==1.6.8
+    # via authlib
 markdown-it-py==4.2.0
     # via rich
 markupsafe==3.0.3
@@ -98,6 +108,8 @@ playwright==1.60.0
     # via retreat-cart
 pluggy==1.6.0
     # via pytest
+pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
+    # via cffi
 pydantic==2.13.4
     # via
     #   fastapi
