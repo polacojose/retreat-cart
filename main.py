@@ -1,5 +1,3 @@
-from repos.paknsave.client import PaknSaveAPI
-from repos.woolworths.client import WoolworthsAPI
 import asyncio
 import uuid
 from enum import Enum
@@ -9,19 +7,19 @@ from fastapi import FastAPI, Form, HTTPException
 from pydantic import SecretStr
 
 from core import log
+from repos.paknsave.client import PaknSaveAPI
 from repos.retreat.client import RetreatManager
 from repos.retreat.models import Retreat
+from repos.woolworths.client import WoolworthsAPI
 from services.grocery import (
     GroceryStoreCacher,
-    GroceryStoreType,
     GroceryStoreService,
-    GroceryStore,
+    GroceryStoreType,
 )
 from services.shoppinglist import (
     Category,
-    ProductResponse,
-    ProductRequest,
     PossibleProductResponse,
+    ProductRequest,
 )
 
 

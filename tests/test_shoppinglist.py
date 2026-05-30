@@ -6,7 +6,7 @@ def test_product_parse():
         {
             "id": "test_id",
             "name": "Test Product",
-            "cost": 2,
+            "cost_per_unit": 2,
             "amount": 100,
             "measurement": Measurement.Gram,
             "category": "stuff",
@@ -18,7 +18,7 @@ def test_product_parse():
         {
             "id": "test_id",
             "name": "Test Product",
-            "cost": 2,
+            "cost_per_unit": 2,
             "amount": 100,
             "measurement": Measurement.Gram,
             "category": Category.best_guess("Fruits Vegetables"),
