@@ -79,14 +79,21 @@ class PaknSaveProduct(BaseModel):
         alias_generator=to_camel,
     )
     product_id: str
+    brand: Optional[str] = None
     name: str
     single_price: SinglePrice
     variable_weight: Optional[VariableWeight] = None
-    category_trees: List[dict[str, str]]
+    category_trees: Optional[List[dict[str, str]]] = None
 
     def to_product(self) -> PossibleProductResponse:
 
         try:
+            name = (
+                f"{self.brand.strip()} {self.name.strip()}"
+                if self.brand
+                else self.name.strip()
+            )
+
             value = (
                 Value(
                     cost_per=self.single_price.comparative_price.price_per_unit / 100.0,
@@ -112,9 +119,11 @@ class PaknSaveProduct(BaseModel):
             return ProductResponse(
                 id=self.product_id,
                 cost_per_unit=self.single_price.price / 100.0,
-                name=self.name.strip(),
+                name=name,
                 value=value,
-                category=Category.best_guess(self.category_trees[0]["level0"]),
+                category=Category.best_guess(self.category_trees[0]["level0"])
+                if self.category_trees is not None
+                else Category.Other,
                 cart_parameters=cart_parameters,
             )
         except Exception as e:

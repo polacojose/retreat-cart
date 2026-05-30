@@ -74,7 +74,7 @@ class CartParameters(BaseModel):
 class ProductBase(BaseModel):
     id: str
     name: str
-    category: Category
+    category: Optional[Category]
 
     @field_validator("category", mode="before")
     @classmethod
