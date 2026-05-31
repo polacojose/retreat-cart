@@ -26,7 +26,7 @@ async def clubplus_authenticate(
         await page.get_by_role("button", name="Continue").click()
 
         # Wait for password input
-        await page.wait_for_selector('input[name="password"]')
+        await page.wait_for_selector('input[name="password"]', timeout=5000)
 
         # Enter password
         async with page.expect_navigation():
@@ -34,7 +34,7 @@ async def clubplus_authenticate(
                 password.get_secret_value()
             )
             await page.get_by_role("button", name="Continue").click()
-            await page.wait_for_url("**www.paknsave.co.nz**", timeout=5000)
+            await page.wait_for_url("**www.paknsave.co.nz**", timeout=10000)
 
         playwright_cookies = await context.cookies()
         user_agent = await page.evaluate("navigator.userAgent")
