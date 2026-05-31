@@ -1,4 +1,4 @@
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 import httpx
 from playwright.async_api import async_playwright
@@ -34,7 +34,9 @@ async def clubplus_authenticate(
                 password.get_secret_value()
             )
             await page.get_by_role("button", name="Continue").click()
-            await page.wait_for_url("**www.paknsave.co.nz**", timeout=10000)
+            await page.wait_for_url(
+                "**{}**".format(urlparse(callback_page).hostname), timeout=10000
+            )
 
         playwright_cookies = await context.cookies()
         user_agent = await page.evaluate("navigator.userAgent")
