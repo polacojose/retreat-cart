@@ -7,8 +7,8 @@ import httpx
 from bs4 import BeautifulSoup
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from repos.retreat.models import Retreat
-from repos.retreat.models import RetreatProduct
+from clients.retreat.models import Retreat
+from clients.retreat.models import RetreatProduct
 from services.shoppinglist import ProductRequest
 
 
@@ -26,7 +26,7 @@ class RetreatConfig(BaseSettings):
 config = RetreatConfig()  # ty:ignore[missing-argument]
 
 
-class RetreatManager:
+class RetreatManagerClient:
     async def get_retreats(self) -> List[Retreat]:
         response = await self.__client.get(
             url="https://@retreatman.nztim.com/retreats",

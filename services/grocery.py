@@ -1,3 +1,5 @@
+from clients.paknsave.client import PaknSaveClient
+from clients.woolworths.client import WoolworthsClient
 import asyncio
 import uuid
 from enum import Enum
@@ -6,8 +8,6 @@ from typing import Annotated, Any, List, Literal, Protocol, Self, Union, cast
 from fastapi import Form
 from pydantic import BaseModel, Field, SecretStr, TypeAdapter
 
-from repos.paknsave.client import PaknSaveAPI
-from repos.woolworths.client import WoolworthsAPI
 from services.shoppinglist import (
     Category,
     PossibleProductResponse,
@@ -46,7 +46,6 @@ class AuthenticatedSession(BaseModel):
     password: Annotated[SecretStr, Form()]
 
 
-# Create a Union type discriminated by the "notification_type" field
 SessionRequest = Annotated[
     Union[PublicSession, AuthenticatedSession], Field(discriminator="session_type")
 ]
@@ -64,9 +63,9 @@ class GroceryStoreCacher:
         async with self.__sem:
             match grocery_store_type:
                 case GroceryStoreType.Woolworths:
-                    grocery_store = WoolworthsAPI()
+                    grocery_store = WoolworthsClient()
                 case GroceryStoreType.PaknSave:
-                    grocery_store = PaknSaveAPI()
+                    grocery_store = PaknSaveClient()
                 case _:
                     raise ValueError(
                         f"Invalid GroceryStoryType ({grocery_store_type}) provided."
@@ -116,4 +115,3 @@ class GroceryStoreService:
 
     async def __aexit__(self, *exc: Any):
         pass
-        # await self.__grocery_store.close()

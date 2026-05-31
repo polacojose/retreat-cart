@@ -7,8 +7,8 @@ from typing import Annotated, List, Optional
 from fastapi import FastAPI, Form, HTTPException, Depends
 
 from core import log
-from repos.retreat.client import RetreatManager
-from repos.retreat.models import Retreat
+from clients.retreat.client import RetreatManagerClient
+from clients.retreat.models import Retreat
 from services.grocery import (
     GroceryStoreCacher,
     GroceryStoreService,
@@ -89,7 +89,7 @@ async def retreats() -> List[Retreat]:
 
     try:
         log.info("Getting retreats...")
-        async with RetreatManager() as retreats_manager:
+        async with RetreatManagerClient() as retreats_manager:
             retreats = await retreats_manager.get_retreats()
             return [r.model_dump() for r in retreats]
     except Exception as e:
@@ -104,7 +104,7 @@ async def shopping_list(retreat_id: int) -> List[ProductRequest]:
 
     try:
         log.info("Retrieving shopping list...")
-        async with RetreatManager() as retreats_manager:
+        async with RetreatManagerClient() as retreats_manager:
             return await retreats_manager.get_shopping_list(retreat_id)
     except Exception as e:
         raise HTTPException(
@@ -165,7 +165,7 @@ async def search_results(
 
     try:
         log.info("Retrieving shopping list...")
-        async with RetreatManager() as retreats_manager:
+        async with RetreatManagerClient() as retreats_manager:
             shopping_list = await retreats_manager.get_shopping_list(retreat_id)
 
         log.info("Searching for items in grocery...")

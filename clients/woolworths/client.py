@@ -1,5 +1,4 @@
 import asyncio
-import uuid
 from typing import List
 
 import httpx
@@ -7,53 +6,25 @@ from playwright.async_api import async_playwright
 from pydantic import SecretStr
 
 from core import log
-from repos.paknsave.models import PaknSaveProduct
+from clients.woolworths.models import WoolworthsProduct
 from services.shoppinglist import PossibleProductResponse, ProductError
 
 
-class PaknSaveAPIClient:
-    def __init__(self):
-        self.__auth_payload = {
-            "fingerprintGuest": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-            "fingerprintUser": str(uuid.UUID),
-        }
-        self.__client = httpx.AsyncClient()
-        self.__auth_token = None
-
-    async def authenticate(self) -> httpx.AsyncClient:
-        response = await self.__client.post(
-            "https://www.paknsave.co.nz/api/user/get-current-user",
-            headers={
-                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-            },
-            json=self.__auth_payload,
-        )
-        response.raise_for_status()
-
-        data = response.json()
-
-        self.__auth_token = data.get("access_token")
-
-        self.__client.headers.update({"Authorization": f"Bearer {self.__auth_token}"})
-
-        return self.__client
-
-
-class PaknSaveAPI:
-    __SEARCH_BASE = "https://api-prod.paknsave.co.nz/v1/edge/search/paginated/products"
+class WoolworthsClient:
+    __SEARCH_BASE = "https://www.woolworths.co.nz/api/v1/products?target=search&search={}&inStockProductsOnly=true"
     __LOGIN_URL = "https://www.woolworths.co.nz/api/v1/bff/initiate-oidc-signin?redirectUrl=https%3A%2F%2Fwww.woolworths.co.nz%2F"
 
     def __init__(self):
         self.__sem = asyncio.Semaphore(1)
 
     async def authenticated_client(self, username: str, password: SecretStr):
-        log.info("Logging into PaknSave...")
+        log.info("Logging into Woolworths...")
         async with async_playwright() as p:
             browser = await p.firefox.launch(headless=True)
             context = await browser.new_context()
             page = await context.new_page()
 
-            await page.goto(PaknSaveAPI.__LOGIN_URL)
+            await page.goto(WoolworthsClient.__LOGIN_URL)
             await page.locator("#username").fill(username)
             async with page.expect_navigation():
                 await page.get_by_role("button", name="Continue").click()
@@ -77,42 +48,39 @@ class PaknSaveAPI:
         }
 
         self.__client = httpx.AsyncClient(cookies=cookies, headers=headers)
-        log.info("Logged into PaknSave.")
+        log.info("Logged into Woolworths.")
 
     async def public_client(self):
-        self.__client = await PaknSaveAPIClient().authenticate()
+        self.__client = httpx.AsyncClient(
+            headers={
+                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+                "x-requested-with": "OnlineShopping.WebApp",
+            }
+        )
+        log.info("Logged into Woolworths.")
 
     async def search(self, name_search: str) -> List[PossibleProductResponse]:
         async with self.__sem:
             items = (
-                (
-                    await self.__client.post(
-                        url=PaknSaveAPI.__SEARCH_BASE.format(name_search),
-                        headers={
-                            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
-                        },
-                        json={
-                            "algoliaQuery": {
-                                "query": name_search,
-                            },
-                            "storeId": "e1925ea7-01bc-4358-ae7c-c6502da5ab12",
-                            "hitsPerPage": 50,
-                            "page": 0,
-                            "sortOrder": "NI_POPULARITY_ASC",
-                        },
-                        timeout=2,
-                    )
+                await self.__client.get(
+                    url=WoolworthsClient.__SEARCH_BASE.format(name_search),
+                    headers={
+                        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+                        "x-requested-with": "OnlineShopping.WebApp",
+                    },
+                    timeout=2,
                 )
-                .json()
-                .get("products")
-            )
+            ).json()["products"]["items"]
 
             products = []
 
             for item in items:
+                if "unit" not in item:
+                    continue
+
                 try:
-                    ps_product = PaknSaveProduct.model_validate(item)
-                    products.append(ps_product.to_product())
+                    ww_product = WoolworthsProduct.model_validate(item)
+                    products.append(ww_product.to_product())
                 except Exception as e:
                     products.append(
                         ProductError(

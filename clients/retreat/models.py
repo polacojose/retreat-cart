@@ -1,8 +1,9 @@
-from services.shoppinglist import ProductRequest, Category, Measurement
 import re
+from typing import Literal
+
 from pydantic import BaseModel, model_validator
 
-from typing import Literal
+from services.shoppinglist import Category, Measurement, ProductRequest
 
 
 class RetreatAmount(BaseModel):
