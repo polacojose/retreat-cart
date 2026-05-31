@@ -3,6 +3,7 @@ from typing import List
 
 import httpx
 from playwright.async_api import async_playwright
+from playwright_stealth.stealth import Stealth
 from pydantic import SecretStr
 
 from clients.woolworths.models import WoolworthsProduct
@@ -19,8 +20,8 @@ class WoolworthsClient:
 
     async def authenticated_client(self, username: str, password: SecretStr):
         log.info("Logging into Woolworths...")
-        async with async_playwright() as p:
-            browser = await p.firefox.launch(headless=True)
+        async with Stealth().use_async(async_playwright()) as p:
+            browser = await p.firefox.launch(headless=False)
             context = await browser.new_context()
             page = await context.new_page()
 
@@ -28,12 +29,12 @@ class WoolworthsClient:
             await page.locator("#username").fill(username)
             async with page.expect_navigation():
                 await page.get_by_role("button", name="Continue").click()
-                await page.wait_for_url("**/login/password**", timeout=5000)
+                await page.wait_for_url("**/login/password**", timeout=10000)
 
             await page.locator("#password").fill(password.get_secret_value())
             async with page.expect_navigation():
                 await page.get_by_role("button", name="Sign in").click()
-                await page.wait_for_url("**www.woolworths.co.nz**", timeout=5000)
+                await page.wait_for_url("**www.woolworths.co.nz**", timeout=10000)
 
             playwright_cookies = await context.cookies()
             user_agent = await page.evaluate("navigator.userAgent")
