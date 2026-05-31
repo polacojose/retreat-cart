@@ -6,12 +6,12 @@ import httpx
 from playwright.async_api import async_playwright
 from pydantic import SecretStr
 
-from core import log
 from clients.paknsave.models import PaknSaveProduct
-from services.shoppinglist import PossibleProductResponse, ProductError
+from core import log
+from models.product import PossibleProductResponse, ProductError
 
 
-class __PaknSaveOAuth2Wrapper:
+class _PaknSaveOAuth2Wrapper:
     def __init__(self):
         self.__auth_payload = {
             "fingerprintGuest": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
@@ -80,7 +80,7 @@ class PaknSaveClient:
         log.info("Logged into PaknSave.")
 
     async def public_client(self):
-        self.__client = await __PaknSaveOAuth2Wrapper().authenticate()
+        self.__client = await _PaknSaveOAuth2Wrapper().authenticate()
 
     async def search(self, name_search: str) -> List[PossibleProductResponse]:
         async with self.__sem:

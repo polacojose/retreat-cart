@@ -1,5 +1,3 @@
-from clients.paknsave.client import PaknSaveClient
-from clients.woolworths.client import WoolworthsClient
 import asyncio
 import uuid
 from enum import Enum
@@ -8,12 +6,10 @@ from typing import Annotated, Any, List, Literal, Protocol, Self, Union, cast
 from fastapi import Form
 from pydantic import BaseModel, Field, SecretStr, TypeAdapter
 
-from services.shoppinglist import (
-    Category,
-    PossibleProductResponse,
-    ProductError,
-    ProductResponse,
-)
+from clients.paknsave.client import PaknSaveClient
+from clients.woolworths.client import WoolworthsClient
+from models.category import Category
+from models.product import PossibleProductResponse, ProductError, ProductResponse
 
 
 class GroceryStore(Protocol):

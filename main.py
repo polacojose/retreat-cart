@@ -1,3 +1,5 @@
+from models.category import Category
+from models.product import ProductRequest, PossibleProductResponse
 from pydantic import SecretStr, BaseModel
 import asyncio
 import uuid
@@ -15,11 +17,6 @@ from services.grocery import (
     GroceryStoreType,
     SessionType,
     session_request_adapter,
-)
-from services.shoppinglist import (
-    Category,
-    PossibleProductResponse,
-    ProductRequest,
 )
 
 

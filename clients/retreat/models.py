@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, model_validator
 
-from services.shoppinglist import Category, Measurement, ProductRequest
+from models.product import Category, Measurement, ProductRequest
 
 
 class RetreatAmount(BaseModel):

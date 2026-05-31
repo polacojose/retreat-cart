@@ -1,13 +1,11 @@
 from enum import Enum
-from typing import Optional, Self, Union
+from typing import Self
 
 import nltk
 from nltk.stem.wordnet import WordNetLemmatizer
-from pydantic import BaseModel, field_validator
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Used by the lemmatizer
 nltk.download("wordnet")
 lemmatizer = WordNetLemmatizer()
 
@@ -17,12 +15,6 @@ def clean_text(text):
     # e.g., "Fruits" -> "fruit", "herbs" -> "herb"
     words = text.lower().replace("&", "").replace(",", "").split()
     return " ".join([lemmatizer.lemmatize(word) for word in words])
-
-
-class Measurement(str, Enum):
-    Gram = "g"
-    Milliliters = "ml"
-    Each = "each"
 
 
 # Initialize category vector for rapid repeated use.
@@ -63,56 +55,3 @@ class Category(str, Enum):
 
 categories = [c for c in Category]
 category_vectors = vectorizer.fit_transform([clean_text(c.value) for c in categories])
-
-
-class CartParameters(BaseModel):
-    min: Optional[float] = None
-    max: Optional[float] = None
-    increment: Optional[float] = None
-
-
-class ProductBase(BaseModel):
-    id: str
-    name: str
-    category: Optional[Category]
-
-    @field_validator("category", mode="before")
-    @classmethod
-    def eval(cls, value: str) -> Category:
-        if value in Category:
-            return Category(value)
-        else:
-            return Category.Other
-
-
-class ProductRequest(ProductBase):
-    amount: Optional[float] = None
-    measurement: Measurement
-
-
-class ProductError(BaseModel):
-    message: str
-    exception_error_message: Optional[str] = None
-
-
-type PossibleProductResponse = Union[ProductResponse, ProductError]
-
-
-class Value(BaseModel):
-    cost_per: float
-    number: float
-    measure: Measurement
-
-
-class ProductResponse(ProductBase):
-    cost_per_unit: float
-    value: Optional[Value] = None
-    cart_parameters: Optional[CartParameters] = None
-
-    @field_validator("category", mode="before")
-    @classmethod
-    def eval(cls, value: str) -> Category:
-        if value in Category:
-            return Category(value)
-        else:
-            return Category.Other

@@ -5,9 +5,9 @@ import httpx
 from playwright.async_api import async_playwright
 from pydantic import SecretStr
 
-from core import log
 from clients.woolworths.models import WoolworthsProduct
-from services.shoppinglist import PossibleProductResponse, ProductError
+from core import log
+from models.product import PossibleProductResponse, ProductError
 
 
 class WoolworthsClient:
