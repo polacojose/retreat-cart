@@ -30,4 +30,5 @@ class ShoppingListConversionService:
         return self
 
     async def __aexit__(self, *exc: Any):
+        _ = exc
         await self.__grocery_store.close()
