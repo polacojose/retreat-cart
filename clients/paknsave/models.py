@@ -7,9 +7,9 @@ from pydantic import (
 )
 from pydantic.alias_generators import to_camel
 
-from services.shoppinglist import (
+from models.category import Category
+from models.product import (
     CartParameters,
-    Category,
     Measurement,
     PossibleProductResponse,
     ProductError,

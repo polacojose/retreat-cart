@@ -1,7 +1,8 @@
+from models.product import PossibleProductResponse, ProductError
+from models.category import Category
 from typing import Any, Self, List
 
 from services.grocery import GroceryStore
-from services.shoppinglist import Category, ProductResponse
 
 
 class ShoppingListConversionService:
@@ -12,10 +13,14 @@ class ShoppingListConversionService:
 
     async def search(
         self, name_search: str, category: Category | None = None
-    ) -> List[ProductResponse]:
+    ) -> List[PossibleProductResponse]:
         products = await self.__grocery_store.search(name_search)
         if category is not None:
-            products = [p for p in products if p.category == category]
+            products = [
+                p
+                for p in products
+                if isinstance(p, ProductError) or p.category == category
+            ]
         return products
 
     async def add_to_cart(self, id: str, amount: int):

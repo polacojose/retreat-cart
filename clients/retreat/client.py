@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from clients.retreat.models import Retreat
 from clients.retreat.models import RetreatProduct
-from services.shoppinglist import ProductRequest
+from models.product import ProductRequest
 
 
 class RetreatConfig(BaseSettings):

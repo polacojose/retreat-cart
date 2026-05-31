@@ -1,4 +1,5 @@
-from services.shoppinglist import ProductResponse, Category, Measurement
+from models.category import Category
+from models.product import ProductResponse, Measurement
 
 
 def test_product_parse():
