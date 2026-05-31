@@ -21,7 +21,7 @@ class WoolworthsClient:
     async def authenticated_client(self, username: str, password: SecretStr):
         log.info("Logging into Woolworths...")
         async with Stealth().use_async(async_playwright()) as p:
-            browser = await p.firefox.launch(headless=False)
+            browser = await p.firefox.launch(headless=True)
             context = await browser.new_context()
             page = await context.new_page()
 
