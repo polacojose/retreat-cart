@@ -7,9 +7,9 @@ import httpx
 from pydantic import SecretStr
 
 from clients.clubplus import clubplus_authenticate
-from clients.paknsave.models import PaknSaveProduct
+from clients.paknsave.models import PaknSaveProduct, PaknSaveDirectProduct
 from core import log
-from models.product import PossibleProductResponse, ProductError
+from models.product import PossibleProductResponse, ProductError, SaleType
 
 
 class _PaknSaveOAuth2Wrapper:
@@ -123,17 +123,47 @@ class PaknSaveClient:
     async def select_store(self, grocery_store_id: str):
         self.__store_id = grocery_store_id
 
+    async def __get_product_by_id(self, product_id: str) -> PossibleProductResponse:
+        if self.__store_id is None:
+            raise Exception("Store selection required.")
+
+        return PaknSaveDirectProduct.model_validate(
+            (
+                await self.__client.get(
+                    f"https://api-prod.paknsave.co.nz/v1/edge/store/{self.__store_id}/product/{product_id}"
+                )
+            ).json()
+        ).to_product()
+
     async def add_to_cart(self, id: str, amount: int):
         if self.__store_id is None:
             raise Exception("Store selection required.")
-        log.info(
-            (
-                await self.__client.post(
-                    "https://www.woolworths.co.nz/api/v1/trolleys/my/items",
-                    json={"sku": id, "quantity": amount, "pricingUnit": "Each"},
-                )
-            ).text
+
+        product = await self.__get_product_by_id(id)
+        if isinstance(product, ProductError):
+            raise Exception("Invalid product id.")
+
+        request_data = {
+            "products": [
+                {
+                    "productId": id,
+                    "quantity": amount,
+                    "sale_type": SaleType.Weight.value
+                    if product.sale_type == SaleType.Both
+                    else SaleType.Units.value,
+                }
+            ]
+        }
+
+        print(f"Request data: {request_data}")
+
+        response = await self.__client.post(
+            "https://api-prod.paknsave.co.nz/v1/edge/cart",
+            json=request_data,
         )
+        print(f"Response: {response}")
+        response.raise_for_status()
+        print(f"Response data: {response.text}")
 
     # exit method
     async def close(self):
