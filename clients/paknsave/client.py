@@ -1,4 +1,4 @@
-from services.grocery import GroceryStore
+from models.grocery import GroceryStore
 import asyncio
 import uuid
 from typing import List

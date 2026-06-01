@@ -62,7 +62,7 @@ class GroceryStoreCacher:
         self.__sem = asyncio.Semaphore(1)
 
     async def generate_session(
-        self, grocery_store_type: GroceryChainClient, request: SessionRequest
+        self, grocery_store_type: GroceryChain, request: SessionRequest
     ) -> uuid.UUID:
         async with self.__sem:
             match grocery_store_type:
