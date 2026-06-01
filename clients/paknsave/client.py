@@ -1,3 +1,4 @@
+from services.grocery import GroceryStore
 import asyncio
 import uuid
 from typing import List
@@ -41,9 +42,10 @@ class _PaknSaveOAuth2Wrapper:
 
 class PaknSaveClient:
     __SEARCH_BASE = "https://api-prod.paknsave.co.nz/v1/edge/search/paginated/products"
-    __LOGIN_URL = "https://login.clubplus.co.nz/?banner=PNS&channel=WEB&callback_url=https%3A%2F%2Fwww.paknsave.co.nz%2Fauth%2Fcallback"
+    __STORE_LIST_URL = "https://api-prod.paknsave.co.nz/v1/edge/store"
 
     def __init__(self):
+        self.__store_id = None
         self.__sem = asyncio.Semaphore(1)
 
     async def authenticated_client(self, username: str, password: SecretStr):
@@ -60,6 +62,9 @@ class PaknSaveClient:
 
     async def search(self, name_search: str) -> List[PossibleProductResponse]:
         async with self.__sem:
+            if self.__store_id is None:
+                raise Exception("Store selection required.")
+
             response = await self.__client.post(
                 url=PaknSaveClient.__SEARCH_BASE.format(name_search),
                 headers={
@@ -76,8 +81,6 @@ class PaknSaveClient:
                 },
                 timeout=2,
             )
-
-            print(response)
 
             items = response.json().get("products")
 
@@ -97,8 +100,32 @@ class PaknSaveClient:
 
             return products
 
+    async def stores(self) -> List[GroceryStore]:
+        async with self.__sem:
+            response = await self.__client.get(
+                url=PaknSaveClient.__STORE_LIST_URL,
+                timeout=2,
+            )
+            response.raise_for_status()
+
+            grocery_stores = []
+            for ps_store in response.json()["stores"]:
+                grocery_stores.append(
+                    GroceryStore(
+                        id=ps_store.get("id"),
+                        name=ps_store.get("name"),
+                        address=ps_store.get("address"),
+                    )
+                )
+
+        return grocery_stores
+
+    async def select_store(self, grocery_store_id: str):
+        self.__store_id = grocery_store_id
+
     async def add_to_cart(self, id: str, amount: int):
-        """sku: 57303"""
+        if self.__store_id is None:
+            raise Exception("Store selection required.")
         log.info(
             (
                 await self.__client.post(

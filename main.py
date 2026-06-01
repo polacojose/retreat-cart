@@ -1,6 +1,6 @@
 from models.category import Category
 from models.product import ProductRequest, PossibleProductResponse
-from pydantic import SecretStr, BaseModel
+from pydantic import SecretStr, BaseModel, Field
 import asyncio
 import uuid
 from enum import Enum
@@ -14,31 +14,33 @@ from clients.retreat.models import Retreat
 from services.grocery import (
     GroceryStoreCacher,
     GroceryStoreService,
-    GroceryStoreType,
+    GroceryChain,
     SessionType,
     session_request_adapter,
+    GroceryStore,
 )
 
 
 class Tags(str, Enum):
-    Core = "Core"
+    Auth = "Authentication"
     Retreat = "Retreat Manager"
-    Grocery = "Grocery Store"
+    Grocery = "Grocery Chain"
+    Conversion = "Conversion"
 
 
-grocery_store_cacher = GroceryStoreCacher()
+grocery_chain_cacher = GroceryStoreCacher()
 app = FastAPI()
 
 
 class SessionParams(BaseModel):
-    grocery_store_type: GroceryStoreType
+    grocery_chain: GroceryChain
     session_type: SessionType
     username: Optional[Annotated[str, Form()]] = None
     password: Optional[Annotated[SecretStr, Form()]] = None
 
 
 def validate_session_params(
-    grocery_store_type: GroceryStoreType,
+    grocery_chain: GroceryChain,
     session_type: SessionType,
     username: Optional[Annotated[str, Form()]] = None,
     password: Optional[Annotated[SecretStr, Form()]] = None,
@@ -52,22 +54,25 @@ def validate_session_params(
         )
 
     return SessionParams(
-        grocery_store_type=grocery_store_type,
+        grocery_chain=grocery_chain,
         session_type=session_type,
         username=username,
         password=password,
     )
 
 
-@app.post("/generate_grocerstore_session", tags=[Tags.Core])
-async def generate_grocerstore_session(
+####################
+# Authentication
+####################
+@app.post("/generate_grocery_chain_session", tags=[Tags.Auth])
+async def generate_grocery_chain_session(
     params: SessionParams = Depends(validate_session_params),
 ) -> uuid.UUID:
-    """Generates a cached grocery_store session."""
+    """Generates a cached Grocery Chain session."""
 
     try:
-        return await grocery_store_cacher.generate_session(
-            params.grocery_store_type,
+        return await grocery_chain_cacher.generate_session(
+            params.grocery_chain,
             session_request_adapter.validate_python(
                 {
                     "session_type": params.session_type,
@@ -80,6 +85,9 @@ async def generate_grocerstore_session(
         raise HTTPException(status_code=401, detail=f"Unable to login: {e}")
 
 
+####################
+# RetreatManager
+####################
 @app.get("/retreats", tags=[Tags.Retreat])
 async def retreats() -> List[Retreat]:
     """Retrieves of list of Retreats from RetreatManager."""
@@ -95,8 +103,8 @@ async def retreats() -> List[Retreat]:
         )
 
 
-@app.get("/shopping_list", tags=[Tags.Retreat])
-async def shopping_list(retreat_id: int) -> List[ProductRequest]:
+@app.get("/retreat_shopping_list", tags=[Tags.Retreat])
+async def retreat_shopping_list(retreat_id: int) -> List[ProductRequest]:
     """Displays a retreat's shopping list."""
 
     try:
@@ -109,11 +117,47 @@ async def shopping_list(retreat_id: int) -> List[ProductRequest]:
         )
 
 
-@app.post("/add_item_to_cart", tags=[Tags.Grocery])
-async def add_item_to_cart(
+####################
+# GroceryStore
+####################
+@app.get("/grocery_stores", tags=[Tags.Grocery])
+async def grocery_stores(
+    grocery_chain_session_id: uuid.UUID,
+) -> List[GroceryStore]:
+    """Return a list of  grocery chain's stores."""
+    try:
+        async with GroceryStoreService(
+            grocery_chain_cacher.get_session(grocery_chain_session_id)
+        ) as service:
+            return await service.stores()
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to list stores for grocery chain: {e}"
+        )
+
+
+@app.post("/grocery_select_store", tags=[Tags.Grocery])
+async def grocery_select_store(
+    grocery_chain_session_id: uuid.UUID, grocery_store_id: Annotated[str, Field()]
+):
+    """Select a grocery store."""
+    try:
+        async with GroceryStoreService(
+            grocery_chain_cacher.get_session(grocery_chain_session_id)
+        ) as service:
+            await service.select_store(grocery_store_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to select a grocery store: {e}"
+        )
+
+
+@app.post("/grocery_add_item_to_cart", tags=[Tags.Grocery])
+async def grocery_add_item_to_cart(
     item_id: Annotated[str, Form()],
     amount: Annotated[int, Form()],
-    grocery_store_session_id: Annotated[uuid.UUID, Form()],
+    grocery_chain_session_id: Annotated[uuid.UUID, Form()],
 ) -> bool:
     """Adds a number of items to a grocery store."""
 
@@ -121,7 +165,7 @@ async def add_item_to_cart(
         log.info(f"Adding {amount} of {item_id}...")
 
         async with GroceryStoreService(
-            grocery_store_cacher.get_session(grocery_store_session_id)
+            grocery_chain_cacher.get_session(grocery_chain_session_id)
         ) as service:
             await service.add_to_cart(item_id, amount)
 
@@ -135,7 +179,7 @@ async def add_item_to_cart(
 @app.get("/grocery_search", tags=[Tags.Grocery])
 async def grocery_search(
     product_name: str,
-    grocery_store_session_id: uuid.UUID,
+    grocery_chain_session_id: uuid.UUID,
     category: Optional[Category] = None,
 ) -> List[PossibleProductResponse]:
     """Searching the grocery store for the specified items."""
@@ -144,7 +188,7 @@ async def grocery_search(
         log.info(f"Searching grocery store for {product_name}...")
 
         async with GroceryStoreService(
-            grocery_store_cacher.get_session(grocery_store_session_id)
+            grocery_chain_cacher.get_session(grocery_chain_session_id)
         ) as service:
             return await service.search(product_name, category)
 
@@ -154,9 +198,12 @@ async def grocery_search(
         )
 
 
-@app.get("/search_results")
+####################
+# Conversion
+####################
+@app.get("/search_results", tags=[Tags.Conversion])
 async def search_results(
-    retreat_id: int, grocery_store_session_id: uuid.UUID
+    retreat_id: int, grocery_chain_session_id: uuid.UUID
 ) -> List[PossibleProductResponse]:
     """Responsible for pairing a retreat's shopping list with a grocery store's products"""
 
@@ -167,7 +214,7 @@ async def search_results(
 
         log.info("Searching for items in grocery...")
         async with GroceryStoreService(
-            grocery_store_cacher.get_session(grocery_store_session_id)
+            grocery_chain_cacher.get_session(grocery_chain_session_id)
         ) as service:
             async with asyncio.TaskGroup() as tg:
                 tasks = []

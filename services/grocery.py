@@ -1,3 +1,4 @@
+from models.grocery import GroceryStore
 import asyncio
 import uuid
 from enum import Enum
@@ -12,9 +13,16 @@ from models.category import Category
 from models.product import PossibleProductResponse, ProductError, ProductResponse
 
 
-class GroceryStore(Protocol):
+class GroceryChain(Protocol):
     async def authenticated_client(self, username: str, password: SecretStr): ...
     async def public_client(self): ...
+
+    async def stores(self) -> List[GroceryStore]:
+        raise Exception("Grocery Store listing not supported.")
+
+    async def select_store(self, grocery_store_id: str):
+        _ = grocery_store_id
+        raise Exception("Grocery Store selection not supported.")
 
     async def search(self, name_search: str) -> List[PossibleProductResponse]: ...
     async def add_to_cart(self, id: str, amount: int): ...
@@ -22,7 +30,7 @@ class GroceryStore(Protocol):
     async def close(self): ...
 
 
-class GroceryStoreType(str, Enum):
+class GroceryChain(str, Enum):
     Woolworths = "woolworths"
     PaknSave = "paknsave"
 
@@ -54,23 +62,19 @@ class GroceryStoreCacher:
         self.__sem = asyncio.Semaphore(1)
 
     async def generate_session(
-        self, grocery_store_type: GroceryStoreType, request: SessionRequest
+        self, grocery_store_type: GroceryChain, request: SessionRequest
     ) -> uuid.UUID:
         async with self.__sem:
             match grocery_store_type:
-                case GroceryStoreType.Woolworths:
+                case GroceryChain.Woolworths:
                     grocery_store = WoolworthsClient()
-                case GroceryStoreType.PaknSave:
+                case GroceryChain.PaknSave:
                     grocery_store = PaknSaveClient()
-                case _:
-                    raise ValueError(
-                        f"Invalid GroceryStoryType ({grocery_store_type}) provided."
-                    )
 
             if isinstance(request, PublicSession):
-                await cast(GroceryStore, grocery_store).public_client()
+                await cast(GroceryChain, grocery_store).public_client()
             else:
-                await cast(GroceryStore, grocery_store).authenticated_client(
+                await cast(GroceryChain, grocery_store).authenticated_client(
                     request.username, request.password
                 )
 
@@ -78,17 +82,23 @@ class GroceryStoreCacher:
             self.__cache[id] = grocery_store
             return id
 
-    def get_session(self, session_id: uuid.UUID) -> GroceryStore:
+    def get_session(self, session_id: uuid.UUID) -> GroceryChain:
         if session_id in self.__cache:
             return self.__cache[session_id]
         raise ValueError(f"Invalid session_id ({session_id}).")
 
 
 class GroceryStoreService:
-    __grocery_store: GroceryStore
+    __grocery_store: GroceryChain
 
-    def __init__(self, grocery_store: GroceryStore):
+    def __init__(self, grocery_store: GroceryChain):
         self.__grocery_store = grocery_store
+
+    async def stores(self) -> List[GroceryStore]:
+        return await self.__grocery_store.stores()
+
+    async def select_store(self, grocery_store_id: str):
+        return await self.__grocery_store.select_store(grocery_store_id)
 
     async def search(
         self, name_search: str, category: Category | None = None

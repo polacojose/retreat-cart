@@ -1,7 +1,7 @@
 [project]
 name = "retreat-cart"
-version = "0.2.5"
-description = "Add your description here"
+version = "0.3.0"
+description = "RetreatManager Shopping list to Grocery Cart conversion."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
