@@ -105,6 +105,10 @@ numpy==2.4.6
 packaging==26.2
     # via pytest
 playwright==1.60.0
+    # via
+    #   playwright-stealth
+    #   retreat-cart
+playwright-stealth==2.0.3
     # via retreat-cart
 pluggy==1.6.0
     # via pytest

@@ -100,6 +100,10 @@ numpy==2.4.6
     #   scikit-learn
     #   scipy
 playwright==1.60.0
+    # via
+    #   playwright-stealth
+    #   retreat-cart
+playwright-stealth==2.0.3
     # via retreat-cart
 pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
     # via cffi
