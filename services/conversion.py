@@ -2,13 +2,13 @@ from models.product import PossibleProductResponse, ProductError
 from models.category import Category
 from typing import Any, Self, List
 
-from services.grocery import GroceryChain
+from services.grocery import GroceryChainClient
 
 
 class ShoppingListConversionService:
-    __grocery_store: GroceryChain
+    __grocery_store: GroceryChainClient
 
-    def __init__(self, grocery_store: GroceryChain):
+    def __init__(self, grocery_store: GroceryChainClient):
         self.__grocery_store = grocery_store
 
     async def search(

@@ -1,4 +1,3 @@
-from models.grocery import GroceryStore
 import asyncio
 import uuid
 from enum import Enum
@@ -10,10 +9,11 @@ from pydantic import BaseModel, Field, SecretStr, TypeAdapter
 from clients.paknsave.client import PaknSaveClient
 from clients.woolworths.client import WoolworthsClient
 from models.category import Category
+from models.grocery import GroceryStore
 from models.product import PossibleProductResponse, ProductError, ProductResponse
 
 
-class GroceryChain(Protocol):
+class GroceryChainClient(Protocol):
     async def authenticated_client(self, username: str, password: SecretStr): ...
     async def public_client(self): ...
 
@@ -62,19 +62,19 @@ class GroceryStoreCacher:
         self.__sem = asyncio.Semaphore(1)
 
     async def generate_session(
-        self, grocery_store_type: GroceryChain, request: SessionRequest
+        self, grocery_store_type: GroceryChainClient, request: SessionRequest
     ) -> uuid.UUID:
         async with self.__sem:
             match grocery_store_type:
                 case GroceryChain.Woolworths:
-                    grocery_store = WoolworthsClient()
+                    grocery_store = cast(GroceryChainClient, WoolworthsClient())
                 case GroceryChain.PaknSave:
-                    grocery_store = PaknSaveClient()
+                    grocery_store = cast(GroceryChainClient, PaknSaveClient())
 
             if isinstance(request, PublicSession):
-                await cast(GroceryChain, grocery_store).public_client()
+                await grocery_store.public_client()
             else:
-                await cast(GroceryChain, grocery_store).authenticated_client(
+                await grocery_store.authenticated_client(
                     request.username, request.password
                 )
 
@@ -82,16 +82,16 @@ class GroceryStoreCacher:
             self.__cache[id] = grocery_store
             return id
 
-    def get_session(self, session_id: uuid.UUID) -> GroceryChain:
+    def get_session(self, session_id: uuid.UUID) -> GroceryChainClient:
         if session_id in self.__cache:
             return self.__cache[session_id]
         raise ValueError(f"Invalid session_id ({session_id}).")
 
 
 class GroceryStoreService:
-    __grocery_store: GroceryChain
+    __grocery_store: GroceryChainClient
 
-    def __init__(self, grocery_store: GroceryChain):
+    def __init__(self, grocery_store: GroceryChainClient):
         self.__grocery_store = grocery_store
 
     async def stores(self) -> List[GroceryStore]:

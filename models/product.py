@@ -51,9 +51,16 @@ class CartParameters(BaseModel):
     increment: Optional[float] = None
 
 
+class SaleType(str, Enum):
+    Units = "UNITS"
+    Weight = "WEIGHT"
+
+
 class ProductResponse(ProductBase):
     cost_per_unit: float
+    """In dollars."""
     value: Optional[Value] = None
+    sale_type: Optional[SaleType] = SaleType.Units
     cart_parameters: Optional[CartParameters] = None
 
     @field_validator("category", mode="before")

@@ -14,7 +14,7 @@ from clients.retreat.models import Retreat
 from services.grocery import (
     GroceryStoreCacher,
     GroceryStoreService,
-    GroceryChain,
+    GroceryChainClient,
     SessionType,
     session_request_adapter,
     GroceryStore,
@@ -33,14 +33,14 @@ app = FastAPI()
 
 
 class SessionParams(BaseModel):
-    grocery_chain: GroceryChain
+    grocery_chain: GroceryChainClient
     session_type: SessionType
     username: Optional[Annotated[str, Form()]] = None
     password: Optional[Annotated[SecretStr, Form()]] = None
 
 
 def validate_session_params(
-    grocery_chain: GroceryChain,
+    grocery_chain: GroceryChainClient,
     session_type: SessionType,
     username: Optional[Annotated[str, Form()]] = None,
     password: Optional[Annotated[SecretStr, Form()]] = None,

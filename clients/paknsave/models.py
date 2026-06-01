@@ -15,6 +15,7 @@ from models.product import (
     ProductError,
     ProductResponse,
     Value,
+    SaleType,
 )
 
 
@@ -54,7 +55,7 @@ class VariableWeight(BaseModel):
         alias_generator=to_camel,
     )
     min_order_quantity: int
-    average_weight: int
+    average_weight: Optional[int] = None
 
 
 class ComparativePrice(BaseModel):
@@ -81,6 +82,7 @@ class PaknSaveProduct(BaseModel):
     product_id: str
     brand: Optional[str] = None
     name: str
+    sale_type: Literal["UNITS", "WEIGHT"]
     single_price: SinglePrice
     variable_weight: Optional[VariableWeight] = None
     category_trees: Optional[List[dict[str, str]]] = None
@@ -121,6 +123,7 @@ class PaknSaveProduct(BaseModel):
                 cost_per_unit=self.single_price.price / 100.0,
                 name=name,
                 value=value,
+                sale_type=SaleType(self.sale_type),
                 category=Category.best_guess(self.category_trees[0]["level0"])
                 if self.category_trees is not None
                 else Category.Other,
