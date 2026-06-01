@@ -54,6 +54,7 @@ class CartParameters(BaseModel):
 class SaleType(str, Enum):
     Units = "UNITS"
     Weight = "WEIGHT"
+    Both = "BOTH"
 
 
 class ProductResponse(ProductBase):
