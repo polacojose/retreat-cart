@@ -7,7 +7,7 @@ from playwright_stealth.stealth import Stealth
 from pydantic import SecretStr
 
 from clients.woolworths.models import WoolworthsProduct
-from core import log
+from core import log, USER_AGENT
 from models.product import PossibleProductResponse, ProductError
 
 
@@ -54,7 +54,7 @@ class WoolworthsClient:
     async def public_client(self):
         self.__client = httpx.AsyncClient(
             headers={
-                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+                "user-agent": USER_AGENT,
                 "x-requested-with": "OnlineShopping.WebApp",
             }
         )
@@ -66,7 +66,7 @@ class WoolworthsClient:
                 await self.__client.get(
                     url=WoolworthsClient.__SEARCH_BASE.format(name_search),
                     headers={
-                        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+                        "user-agent": USER_AGENT,
                         "x-requested-with": "OnlineShopping.WebApp",
                     },
                     timeout=2,

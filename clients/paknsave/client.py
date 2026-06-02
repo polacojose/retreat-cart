@@ -8,14 +8,14 @@ from pydantic import SecretStr
 
 from clients.clubplus import clubplus_authenticate
 from clients.paknsave.models import PaknSaveProduct, PaknSaveDirectProduct
-from core import log
+from core import log, USER_AGENT
 from models.product import PossibleProductResponse, ProductError, SaleType
 
 
 class _PaknSaveOAuth2Wrapper:
     def __init__(self, client: httpx.AsyncClient | None = None):
         self.__auth_payload = {
-            "fingerprintGuest": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+            "fingerprintGuest": USER_AGENT,
             "fingerprintUser": str(uuid.UUID),
         }
         self.__client = client if client else httpx.AsyncClient()
@@ -25,7 +25,7 @@ class _PaknSaveOAuth2Wrapper:
         response = await self.__client.post(
             "https://www.paknsave.co.nz/api/user/get-current-user",
             headers={
-                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+                "user-agent": USER_AGENT,
             },
             json=self.__auth_payload,
         )
@@ -68,7 +68,7 @@ class PaknSaveClient:
             response = await self.__client.post(
                 url=PaknSaveClient.__SEARCH_BASE.format(name_search),
                 headers={
-                    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+                    "user-agent": USER_AGENT,
                 },
                 json={
                     "algoliaQuery": {
