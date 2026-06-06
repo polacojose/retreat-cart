@@ -1,4 +1,4 @@
-from models.grocery import GroceryStore
+from models.grocery import GroceryStore, AddToCartItem
 import asyncio
 import uuid
 from typing import List
@@ -135,35 +135,39 @@ class PaknSaveClient:
             ).json()
         ).to_product()
 
-    async def add_to_cart(self, id: str, amount: int):
-        if self.__store_id is None:
-            raise Exception("Store selection required.")
+    async def add_to_cart(self, items: List[AddToCartItem]):
 
-        product = await self.__get_product_by_id(id)
-        if isinstance(product, ProductError):
-            raise Exception("Invalid product id.")
+        products_request = []
+        for item in items:
+            if self.__store_id is None:
+                raise Exception("Store selection required.")
 
-        request_data = {
-            "products": [
+            product = await self.__get_product_by_id(item.id)
+            if isinstance(product, ProductError):
+                raise Exception("Invalid product id.")
+
+            products_request.append(
                 {
-                    "productId": id,
-                    "quantity": amount,
+                    "productId": item.id,
+                    "quantity": item.amount,
                     "sale_type": SaleType.Weight.value
                     if product.sale_type == SaleType.Both
                     else SaleType.Units.value,
                 }
-            ]
-        }
+            )
 
-        print(f"Request data: {request_data}")
+        if len(products_request) > 0:
+            request_data = {"products": products_request}
 
-        response = await self.__client.post(
-            "https://api-prod.paknsave.co.nz/v1/edge/cart",
-            json=request_data,
-        )
-        print(f"Response: {response}")
-        response.raise_for_status()
-        print(f"Response data: {response.text}")
+            print(f"Request data: {request_data}")
+
+            response = await self.__client.post(
+                "https://api-prod.paknsave.co.nz/v1/edge/cart",
+                json=request_data,
+            )
+            print(f"Response: {response}")
+            response.raise_for_status()
+            print(f"Response data: {response.text}")
 
     # exit method
     async def close(self):

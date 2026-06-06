@@ -1,3 +1,4 @@
+from models.grocery import AddToCartItem
 from models.category import Category
 from models.product import ProductRequest, PossibleProductResponse
 from pydantic import SecretStr, BaseModel, Field
@@ -12,7 +13,7 @@ from core import log
 from clients.retreat.client import RetreatManagerClient
 from clients.retreat.models import Retreat
 from services.grocery import (
-    GroceryStoreCacher,
+    GroceryChainSessionCacher,
     GroceryStoreService,
     SessionType,
     session_request_adapter,
@@ -28,7 +29,7 @@ class Tags(str, Enum):
     Conversion = "Conversion"
 
 
-grocery_chain_cacher = GroceryStoreCacher()
+grocery_chain_cacher = GroceryChainSessionCacher()
 app = FastAPI()
 
 
@@ -178,19 +179,18 @@ async def grocery_select_store(
 
 @app.post("/grocery/add_item_to_cart", tags=[Tags.Grocery])
 async def grocery_add_item_to_cart(
-    item_id: Annotated[str, Form()],
-    amount: Annotated[int, Form()],
-    grocery_chain_session_id: Annotated[uuid.UUID, Form()],
+    grocery_chain_session_id: uuid.UUID,
+    items: List[AddToCartItem],
 ) -> bool:
     """Adds a number of items to a grocery store."""
 
     try:
-        log.info(f"Adding {amount} of {item_id}...")
+        log.debug(f"Adding items: {items}...")
 
         async with GroceryStoreService(
             grocery_chain_cacher.get_session(grocery_chain_session_id)
         ) as service:
-            await service.add_to_cart(item_id, amount)
+            await service.add_to_cart(items)
 
         return True
     except Exception as e:

@@ -1,3 +1,5 @@
+from core import APP_CONFIG
+from models.product import ProductRequest
 import asyncio
 import html
 import re
@@ -5,25 +7,9 @@ from typing import List, Self
 
 import httpx
 from bs4 import BeautifulSoup
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from clients.retreat.models import Retreat
 from clients.retreat.models import RetreatProduct
-from models.product import ProductRequest
-
-
-class RetreatConfig(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        env_prefix="retreat_",
-        extra="ignore",
-    )
-    email: str
-    password: str
-
-
-config = RetreatConfig()  # ty:ignore[missing-argument]
 
 
 class RetreatManagerClient:
@@ -93,8 +79,8 @@ class RetreatManagerClient:
             "https://retreatman.nztim.com/login",
             data={
                 "_token": "4ocbxT3x3qJA85wm1IwdFCWjbXCJY8gLGkGcUYBK",
-                "email": str(config.email),
-                "password": str(config.password),
+                "email": str(APP_CONFIG.retreat_email),
+                "password": str(APP_CONFIG.retreat_password),
                 "remember": 1,
             },
         )

@@ -1,3 +1,5 @@
+from core import APP_CONFIG
+import time
 import asyncio
 import uuid
 from enum import Enum
@@ -9,7 +11,7 @@ from pydantic import BaseModel, Field, SecretStr, TypeAdapter
 from clients.paknsave.client import PaknSaveClient
 from clients.woolworths.client import WoolworthsClient
 from models.category import Category
-from models.grocery import GroceryStore
+from models.grocery import GroceryStore, AddToCartItem
 from models.product import PossibleProductResponse, ProductError, ProductResponse
 
 
@@ -25,7 +27,7 @@ class GroceryChainClient(Protocol):
         raise Exception("Grocery Store selection not supported.")
 
     async def search(self, name_search: str) -> List[PossibleProductResponse]: ...
-    async def add_to_cart(self, id: str, amount: int): ...
+    async def add_to_cart(self, items: List[AddToCartItem]): ...
 
     async def close(self): ...
 
@@ -56,35 +58,46 @@ SessionRequest = Annotated[
 session_request_adapter = TypeAdapter(SessionRequest)
 
 
-class GroceryStoreCacher:
+class GroceryChainSessionCacherItem(BaseModel):
+    cache_time: float
+    grocery_chain_client: Any
+
+
+class GroceryChainSessionCacher:
     def __init__(self):
-        self.__cache = {}
+        self.__cache: dict[uuid.UUID, GroceryChainSessionCacherItem] = {}
         self.__sem = asyncio.Semaphore(1)
 
     async def generate_session(
-        self, grocery_store_type: GroceryChain, request: SessionRequest
+        self, grocery_chain_type: GroceryChain, request: SessionRequest
     ) -> uuid.UUID:
         async with self.__sem:
-            match grocery_store_type:
+            match grocery_chain_type:
                 case GroceryChain.Woolworths:
-                    grocery_store = cast(GroceryChainClient, WoolworthsClient())
+                    grocery_chain = cast(GroceryChainClient, WoolworthsClient())
                 case GroceryChain.PaknSave:
-                    grocery_store = cast(GroceryChainClient, PaknSaveClient())
+                    grocery_chain = cast(GroceryChainClient, PaknSaveClient())
 
             if isinstance(request, PublicSession):
-                await grocery_store.public_client()
+                await grocery_chain.public_client()
             else:
-                await grocery_store.authenticated_client(
+                await grocery_chain.authenticated_client(
                     request.username, request.password
                 )
 
             id = uuid.uuid4()
-            self.__cache[id] = grocery_store
+            self.__cache[id] = GroceryChainSessionCacherItem(
+                cache_time=time.time(), grocery_chain_client=grocery_chain
+            )
+
             return id
 
     def get_session(self, session_id: uuid.UUID) -> GroceryChainClient:
-        if session_id in self.__cache:
-            return self.__cache[session_id]
+        if (cache_item := self.__cache.get(session_id)) is not None:
+            if time.time() - cache_item.cache_time > APP_CONFIG.grocery_chain_cache_ttl:
+                del self.__cache[session_id]
+                raise Exception("Session timed out")
+            return cache_item.grocery_chain_client
         raise ValueError(f"Invalid session_id ({session_id}).")
 
 
@@ -113,8 +126,8 @@ class GroceryStoreService:
             ]
         return products
 
-    async def add_to_cart(self, id: str, amount: int):
-        await self.__grocery_store.add_to_cart(id, amount)
+    async def add_to_cart(self, items: List[AddToCartItem]):
+        await self.__grocery_store.add_to_cart(items)
 
     async def __aenter__(self) -> Self:
         return self

@@ -1,3 +1,4 @@
+from models.grocery import AddToCartItem
 import asyncio
 from typing import List
 
@@ -92,16 +93,22 @@ class WoolworthsClient:
 
             return products
 
-    async def add_to_cart(self, id: str, amount: int):
+    async def add_to_cart(self, items: List[AddToCartItem]):
         """sku: 57303"""
-        log.info(
-            (
-                await self.__client.post(
-                    "https://www.woolworths.co.nz/api/v1/trolleys/my/items",
-                    json={"sku": id, "quantity": amount, "pricingUnit": "Each"},
-                )
-            ).text
-        )
+
+        for item in items:
+            log.info(
+                (
+                    await self.__client.post(
+                        "https://www.woolworths.co.nz/api/v1/trolleys/my/items",
+                        json={
+                            "sku": item.id,
+                            "quantity": item.amount,
+                            "pricingUnit": "Each",
+                        },
+                    )
+                ).text
+            )
 
     # exit method
     async def close(self):
