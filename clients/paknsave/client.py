@@ -74,7 +74,7 @@ class PaknSaveClient:
                     "algoliaQuery": {
                         "query": name_search,
                     },
-                    "storeId": "e1925ea7-01bc-4358-ae7c-c6502da5ab12",
+                    "storeId": self.__store_id,
                     "hitsPerPage": 50,
                     "page": 0,
                     "sortOrder": "NI_POPULARITY_ASC",
@@ -159,15 +159,11 @@ class PaknSaveClient:
         if len(products_request) > 0:
             request_data = {"products": products_request}
 
-            print(f"Request data: {request_data}")
-
             response = await self.__client.post(
                 "https://api-prod.paknsave.co.nz/v1/edge/cart",
                 json=request_data,
             )
-            print(f"Response: {response}")
             response.raise_for_status()
-            print(f"Response data: {response.text}")
 
     # exit method
     async def close(self):
