@@ -1,7 +1,8 @@
+from typing import Callable, Optional, Coroutine, Any
 from urllib.parse import quote_plus, urlparse
 
 import httpx
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, Page
 from playwright_stealth.stealth import Stealth
 from pydantic import SecretStr
 
@@ -11,7 +12,10 @@ _CLUBPLUS_LOGIN_URL = (
 
 
 async def clubplus_authenticate(
-    callback_page: str, username: str, password: SecretStr
+    callback_page: str,
+    username: str,
+    password: SecretStr,
+    final_callback_func: Optional[Callable[..., Coroutine[Any, Any, Any]]] = None,
 ) -> httpx.AsyncClient:
     async with Stealth().use_async(async_playwright()) as p:
         browser = await p.firefox.launch(headless=True)
@@ -40,6 +44,9 @@ async def clubplus_authenticate(
 
         playwright_cookies = await context.cookies()
         user_agent = await page.evaluate("navigator.userAgent")
+
+        if final_callback_func is not None:
+            await final_callback_func(page)
 
         await browser.close()
 

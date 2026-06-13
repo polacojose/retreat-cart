@@ -1,6 +1,6 @@
 [project]
 name = "retreat-cart"
-version = "0.5.1"
+version = "0.6.0"
 description = "RetreatManager Shopping list to Grocery Cart conversion."
 
 readme = "README.md"

@@ -1,3 +1,5 @@
+import re
+from playwright.async_api import Page
 from models.grocery import GroceryStore, AddToCartItem
 import asyncio
 import uuid
@@ -49,10 +51,22 @@ class PaknSaveClient:
         self.__sem = asyncio.Semaphore(1)
 
     async def authenticated_client(self, username: str, password: SecretStr):
+
+        async def get_default_store(page: Page):
+            default_data_content = (
+                await page.locator("script#__NEXT_DATA__").inner_text()
+            )[0:150]
+            match = re.search(r'"id":"(.+?)"', default_data_content)
+            if match:
+                self.__store_id = match.group(1)
+
         log.info("Logging into PaknSave...")
         self.__client = await _PaknSaveOAuth2Wrapper(
             await clubplus_authenticate(
-                "https://www.paknsave.co.nz/auth/callback", username, password
+                "https://www.paknsave.co.nz/auth/callback",
+                username,
+                password,
+                get_default_store,
             )
         ).authenticate()
         log.info("Logged into PaknSave.")
