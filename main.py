@@ -1,24 +1,24 @@
-from models.grocery import AddToCartItem
-from models.category import Category
-from models.product import ProductRequest, PossibleProductResponse
-from pydantic import SecretStr, BaseModel, Field
 import asyncio
 import uuid
 from enum import Enum
 from typing import Annotated, List, Optional
 
-from fastapi import FastAPI, Form, HTTPException, Depends
+from fastapi import Depends, FastAPI, Form, HTTPException
+from pydantic import BaseModel, Field, SecretStr
 
-from core import log
 from clients.retreat.client import RetreatManagerClient
 from clients.retreat.models import Retreat
+from core import log
+from models.category import Category
+from models.grocery import AddToCartItem
+from models.product import PossibleProductResponse, ProductRequest
 from services.grocery import (
+    GroceryChain,
     GroceryChainSessionCacher,
+    GroceryStore,
     GroceryStoreService,
     SessionType,
     session_request_adapter,
-    GroceryStore,
-    GroceryChain,
 )
 
 

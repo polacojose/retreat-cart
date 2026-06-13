@@ -1,6 +1,7 @@
+from models import product
 import re
 from enum import Enum
-from typing import Annotated, Any, Callable, List, Literal, Optional
+from typing import Annotated, Any, Callable, List, Optional
 
 from pydantic import (
     BaseModel,
@@ -17,6 +18,8 @@ from models.product import (
     PossibleProductResponse,
     ProductError,
     ProductResponse,
+    Value,
+    Amount,
 )
 
 
@@ -26,6 +29,34 @@ class Unit(str, Enum):
 
 
 class Price(BaseModel):
+    """
+    {
+        "originalPrice": 7.95,
+        "salePrice": 7.95,
+        "savePrice": 0,
+        "savePercentage": 0,
+        "canShowSavings": true,
+        "hasBonusPoints": false,
+        "isClubPrice": false,
+        "isSpecial": false,
+        "isNew": false,
+        "canShowOriginalPrice": true,
+        "discount": null,
+        "total": null,
+        "isTargetedOffer": false,
+        "averagePricePerSingleUnit": 0.95,
+        "isBoostOffer": false,
+        "purchasingUnitPrice": null,
+        "orderedPrice": null,
+        "isUsingOrderedPrice": false,
+        "currentPricingMatchesOrderedPricing": null,
+        "extendedListPrice": null,
+        "originalAveragePricePerSingleUnit": null,
+        "promotionStartDate": null,
+        "promotionEndDate": null
+      }
+    """
+
     model_config = ConfigDict(
         alias_generator=to_camel,
     )
@@ -34,14 +65,25 @@ class Price(BaseModel):
 
 
 class Quanity(BaseModel):
+    """
+    {
+      "min": 0.2,
+      "max": 100,
+      "increment": 0.1,
+      "value": null,
+      "quantityInOrder": null,
+      "purchasingQuantityString": null
+    }
+    """
+
     min: float
     max: float
     increment: float
 
 
-class Measure(BaseModel):
+class WoolworthsMeasurement(BaseModel):
     number: int
-    measurement: Literal["g", "ml", "each"]
+    measurement: product.Measure
 
     @model_validator(mode="before")
     @classmethod
@@ -60,15 +102,32 @@ class Measure(BaseModel):
 
             # Normalize units and handle conversions
             if unit in ("g"):
-                return {"number": int(num), "measurement": "g"}
+                return {"number": int(num), "measurement": product.Measure.Gram}
             elif unit in ("kg"):
-                return {"number": int(num * 1000), "measurement": "g"}
+                return {
+                    "number": int(num * 1000),
+                    "measurement": product.Measure.Gram,
+                }
             elif unit in ("ml"):
-                return {"number": int(num), "measurement": "ml"}
+                return {
+                    "number": int(num),
+                    "measurement": product.Measure.Milliliters,
+                }
             elif unit in ("l"):
-                return {"number": int(num * 1000), "measurement": "ml"}
+                return {
+                    "number": int(num * 1000),
+                    "measurement": product.Measure.Milliliters,
+                }
             elif unit in ("ea"):
-                return {"number": int(num), "measurement": "each"}
+                return {
+                    "number": int(num),
+                    "measurement": product.Measure.Each,
+                }
+            elif unit in ("ss"):
+                return {
+                    "number": int(num),
+                    "measurement": product.Measure.Sheets,
+                }
             else:
                 raise ValueError(f"Unsupported unit: '{raw_measurement}'")
 
@@ -83,22 +142,36 @@ def invalid_to_none(v: Any, handler: Callable[[Any], Any]) -> Any:
 
 
 class Size(BaseModel):
+    """
+    {
+        "cupListPrice": 7.95,
+        "cupPrice": 7.95,
+        "cupMeasure": "1kg",
+        "packageType": null,
+        "volumeSize": "per kg"
+      }
+    """
+
     model_config = ConfigDict(
         alias_generator=to_camel,
     )
     cup_list_price: float
     cup_price: float
-    cup_measure: Annotated[Optional[Measure], WrapValidator(invalid_to_none)] = None
-    volume_size: Annotated[Optional[Measure], WrapValidator(invalid_to_none)] = None
+    cup_measure: Annotated[
+        Optional[WoolworthsMeasurement], WrapValidator(invalid_to_none)
+    ] = None
+    volume_size: Annotated[
+        Optional[WoolworthsMeasurement], WrapValidator(invalid_to_none)
+    ] = None
 
     @field_validator("volume_size", "cup_measure", mode="before")
     @classmethod
     def eval(cls, value: str) -> str | None:
-        value = value.strip()
-        if value == "":
-            return None
-        else:
-            return value.replace("per ", "1").replace("min order ", "")
+        if value is not None:
+            if value == "":
+                return None
+            else:
+                return value.replace("per ", "1").replace("min order ", "")
 
 
 class AvailabilityStatus(str, Enum):
@@ -108,6 +181,13 @@ class AvailabilityStatus(str, Enum):
 
 
 class Department(BaseModel):
+    """
+    {
+      "id": 1,
+      "name": "Fruit & Veg"
+    }
+    """
+
     name: str
 
 
@@ -129,6 +209,57 @@ category_map = {
 
 
 class WoolworthsProduct(BaseModel):
+    """
+    {
+      "type": "Product",
+      "name": "fresh tomatoes loose",
+      "barcode": "9414742353200",
+      "variety": "loose",
+      "brand": "fresh",
+      "slug": "fresh-tomatoes-loose",
+      "sku": "149681",
+      "unit": "Kg",
+      "selectedPurchasingUnit": null,
+      "price": {...},
+      "images": {
+        "small": "https://assets.woolworths.com.au/images/2010/149681.jpg?impolicy=wowcdxwbjbx&w=65&h=65",
+        "big": "https://assets.woolworths.com.au/images/2010/149681.jpg?impolicy=wowcdxwbjbx&w=200&h=200"
+      },
+      "quantity": {...},
+      "stockLevel": 3,
+      "eachUnitQuantity": null,
+      "averageWeightPerUnit": 0.12,
+      "size": {...},
+      "hasShopperNotes": null,
+      "productTag": {
+        "tagType": "Other",
+        "multiBuy": null,
+        "bonusPoints": null,
+        "additionalTag": {
+          "name": "Countdown's Own",
+          "link": "/shop/productgroup/80842",
+          "imagePath": "/Content/PromotionTags/F24_Own_brand.png",
+          "linkTarget": "_self",
+          "altText": null
+        },
+        "targetedOffer": null,
+        "boostOffer": null
+      },
+      "departments": [...],
+      "subsAllowed": false,
+      "supportsBothEachAndKgPricing": true,
+      "adId": null,
+      "brandSuggestionId": null,
+      "brandSuggestionName": null,
+      "priceUnitLabel": null,
+      "availabilityStatus": "In Stock",
+      "onlineSample": null,
+      "onlineSampleRealProductMapId": 0,
+      "isAgeRestricted": false,
+      "isTobaccoProduct": false
+    },
+    """
+
     model_config = ConfigDict(
         alias_generator=to_camel,
     )
@@ -155,9 +286,18 @@ class WoolworthsProduct(BaseModel):
             if self.size.cup_measure is not None:
                 return ProductResponse(
                     id=self.sku,
-                    cost_per_unit=self.size.cup_price / self.size.cup_measure.number,
+                    cost_per_unit=self.price.sale_price
+                    if self.price.sale_price is not None
+                    else self.price.original_price,
                     name=self.name.strip(),
                     category=category,
+                    value=Value(
+                        cost_per=self.size.cup_price,
+                        amount=Amount(
+                            number=self.size.cup_measure.number,
+                            measurement=self.size.cup_measure.measurement,
+                        ),
+                    ),
                     cart_parameters=CartParameters(
                         min=self.quantity.min,
                         max=self.quantity.max,

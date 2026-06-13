@@ -1,5 +1,5 @@
 from models.category import Category
-from models.product import ProductResponse, Measurement
+from models.product import ProductResponse, Measure
 
 
 def test_product_parse():
@@ -9,7 +9,7 @@ def test_product_parse():
             "name": "Test Product",
             "cost_per_unit": 2,
             "amount": 100,
-            "measurement": Measurement.Gram,
+            "measurement": Measure.Gram,
             "category": "stuff",
         }
     )
@@ -21,7 +21,7 @@ def test_product_parse():
             "name": "Test Product",
             "cost_per_unit": 2,
             "amount": 100,
-            "measurement": Measurement.Gram,
+            "measurement": Measure.Gram,
             "category": Category.best_guess("Fruits Vegetables"),
         }
     )

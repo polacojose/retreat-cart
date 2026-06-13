@@ -1,4 +1,4 @@
-from models.product import ProductResponse, Measurement, SaleType
+from models.product import ProductResponse, Measure, SaleType
 from clients.paknsave.models import PaknSaveProduct
 from models.category import Category
 
@@ -59,5 +59,5 @@ def test_service_product_parse():
     assert product.cost_per_unit == 24.90
     assert product.value is not None
     assert product.value.cost_per == 24.90
-    assert product.value.number == 1000
-    assert product.value.measure == Measurement.Gram
+    assert product.value.amount.number == 1000
+    assert product.value.amount.measurement == Measure.Gram

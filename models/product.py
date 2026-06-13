@@ -6,10 +6,11 @@ from pydantic import BaseModel, field_validator
 from models.category import Category
 
 
-class Measurement(str, Enum):
+class Measure(str, Enum):
     Gram = "g"
     Milliliters = "ml"
     Each = "each"
+    Sheets = "sheets"
 
 
 class ProductBase(BaseModel):
@@ -26,9 +27,13 @@ class ProductBase(BaseModel):
             return Category.Other
 
 
+class Amount(BaseModel):
+    number: float
+    measurement: Measure
+
+
 class ProductRequest(ProductBase):
-    amount: Optional[float] = None
-    measurement: Measurement
+    amount: Amount
 
 
 class ProductError(BaseModel):
@@ -41,8 +46,7 @@ type PossibleProductResponse = Union[ProductResponse, ProductError]
 
 class Value(BaseModel):
     cost_per: float
-    number: float
-    measure: Measurement
+    amount: Amount
 
 
 class CartParameters(BaseModel):

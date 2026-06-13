@@ -10,18 +10,88 @@ from pydantic.alias_generators import to_camel
 from models.category import Category
 from models.product import (
     CartParameters,
-    Measurement,
+    Measure,
     PossibleProductResponse,
     ProductError,
     ProductResponse,
     Value,
     SaleType,
+    Amount,
 )
 
+# {
+#    "name": "Loose Red Tomatoes",
+#    "unitOfMeasure": "KGM",
+#    "price": 699,
+#    "nonLoyaltyCardPrice": 699,
+#    "productId": "5040098-KGM-000",
+#    "weighable": {
+#        "avgWeightUoM": "g",
+#        "avgWeightPerUnit": 140,
+#        "minOrderQty": 150,
+#        "stepSize": 100
+#    },
+#    "sku": "4064",
+#    "comparativePricePerUnit": 699,
+#    "comparativeUnitQuantity": 1,
+#    "comparativeUnitQuantityUoM": "kg",
+#    "comparativeUnitMeasureDescription": "1kg",
+#    "saleType": "BOTH",
+#    "ingredientStatement": "TOMATOES",
+#    "fsIngredientStatement": "TOMATOES",
+#    "fsValidation": {
+#        "allergens": {
+#            "status": "PASSED",
+#            "pealStatus": "PASSED"
+#        }
+#    },
+#    "restrictedFlag": false,
+#    "netContent": 1,
+#    "netContentUOM": "kg",
+#    "displayName": "kg",
+#    "height": 80,
+#    "width": 1,
+#    "categories": [
+#        "Vegetables",
+#        "Tomatoes, Cucumber & Capsicum"
+#    ],
+#    "availability": [
+#        "IN_STORE",
+#        "ONLINE"
+#    ],
+#    "originRegulated": true,
+#    "originStatement": "Product of New Zealand",
+#    "categoryTrees": [
+#        {
+#            "level0": "Fruit & Vegetables",
+#            "level1": "Vegetables",
+#            "level2": "Tomatoes, Cucumber & Capsicum"
+#        }
+#    ],
+#    "fulfilmentOptions": [
+#        {
+#            "method": "COLLECT",
+#            "collectionPointType": "COUNTER",
+#            "available": true
+#        }
+#    ],
+#    "cateredFlag": false,
+#    "images": {
+#        "primaryImages": {
+#            "100px": "https://a.fsimg.co.nz/product/retail/fan/image/100x100/5040098.png",
+#            "200px": "https://a.fsimg.co.nz/product/retail/fan/image/200x200/5040098.png",
+#            "300px": "https://a.fsimg.co.nz/product/retail/fan/image/300x300/5040098.png",
+#            "400px": "https://a.fsimg.co.nz/product/retail/fan/image/400x400/5040098.png",
+#            "500px": "https://a.fsimg.co.nz/product/retail/fan/image/500x500/5040098.png"
+#        },
+#        "alternateImages": []
+#    }
+# }
 
-class Measure(BaseModel):
+
+class PaknSaveMeasurement(BaseModel):
     number: int
-    measurement: Literal["g", "ml", "each"]
+    measurement: Literal["g", "ml", "each", "sheets"]
 
     @model_validator(mode="before")
     @classmethod
@@ -44,6 +114,10 @@ class Measure(BaseModel):
                     return {"number": int(num * 1000), "measurement": "ml"}
                 case "ea":
                     return {"number": int(num), "measurement": "each"}
+                case "ea":
+                    return {"number": int(num), "measurement": "each"}
+                case "sheets":
+                    return {"number": int(num), "measurement": "sheets"}
                 case _:
                     raise ValueError(f"Unsupported unit: '{value}'")
 
@@ -64,7 +138,7 @@ class ComparativePrice(BaseModel):
     )
     price_per_unit: int
     unit_quantity: int
-    unit_quantity_uom: Measure
+    unit_quantity_uom: PaknSaveMeasurement
 
 
 class SinglePrice(BaseModel):
@@ -99,10 +173,12 @@ class PaknSaveProduct(BaseModel):
             value = (
                 Value(
                     cost_per=self.single_price.comparative_price.price_per_unit / 100.0,
-                    number=self.single_price.comparative_price.unit_quantity
-                    * self.single_price.comparative_price.unit_quantity_uom.number,
-                    measure=Measurement(
-                        self.single_price.comparative_price.unit_quantity_uom.measurement
+                    amount=Amount(
+                        number=self.single_price.comparative_price.unit_quantity
+                        * self.single_price.comparative_price.unit_quantity_uom.number,
+                        measurement=Measure(
+                            self.single_price.comparative_price.unit_quantity_uom.measurement
+                        ),
                     ),
                 )
                 if self.single_price.comparative_price
@@ -173,73 +249,3 @@ class PaknSaveDirectProduct(BaseModel):
                 message=f"Unable to convert product response: {self}",
                 exception_error_message=str(e),
             )
-
-
-# {
-#    "name": "Loose Red Tomatoes",
-#    "unitOfMeasure": "KGM",
-#    "price": 699,
-#    "nonLoyaltyCardPrice": 699,
-#    "productId": "5040098-KGM-000",
-#    "weighable": {
-#        "avgWeightUoM": "g",
-#        "avgWeightPerUnit": 140,
-#        "minOrderQty": 150,
-#        "stepSize": 100
-#    },
-#    "sku": "4064",
-#    "comparativePricePerUnit": 699,
-#    "comparativeUnitQuantity": 1,
-#    "comparativeUnitQuantityUoM": "kg",
-#    "comparativeUnitMeasureDescription": "1kg",
-#    "saleType": "BOTH",
-#    "ingredientStatement": "TOMATOES",
-#    "fsIngredientStatement": "TOMATOES",
-#    "fsValidation": {
-#        "allergens": {
-#            "status": "PASSED",
-#            "pealStatus": "PASSED"
-#        }
-#    },
-#    "restrictedFlag": false,
-#    "netContent": 1,
-#    "netContentUOM": "kg",
-#    "displayName": "kg",
-#    "height": 80,
-#    "width": 1,
-#    "categories": [
-#        "Vegetables",
-#        "Tomatoes, Cucumber & Capsicum"
-#    ],
-#    "availability": [
-#        "IN_STORE",
-#        "ONLINE"
-#    ],
-#    "originRegulated": true,
-#    "originStatement": "Product of New Zealand",
-#    "categoryTrees": [
-#        {
-#            "level0": "Fruit & Vegetables",
-#            "level1": "Vegetables",
-#            "level2": "Tomatoes, Cucumber & Capsicum"
-#        }
-#    ],
-#    "fulfilmentOptions": [
-#        {
-#            "method": "COLLECT",
-#            "collectionPointType": "COUNTER",
-#            "available": true
-#        }
-#    ],
-#    "cateredFlag": false,
-#    "images": {
-#        "primaryImages": {
-#            "100px": "https://a.fsimg.co.nz/product/retail/fan/image/100x100/5040098.png",
-#            "200px": "https://a.fsimg.co.nz/product/retail/fan/image/200x200/5040098.png",
-#            "300px": "https://a.fsimg.co.nz/product/retail/fan/image/300x300/5040098.png",
-#            "400px": "https://a.fsimg.co.nz/product/retail/fan/image/400x400/5040098.png",
-#            "500px": "https://a.fsimg.co.nz/product/retail/fan/image/500x500/5040098.png"
-#        },
-#        "alternateImages": []
-#    }
-# }

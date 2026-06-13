@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, model_validator
 
-from models.product import Category, Measurement, ProductRequest
+from models.product import Category, Measure, ProductRequest
 
 
 class RetreatAmount(BaseModel):
@@ -56,8 +56,8 @@ class RetreatProduct(BaseModel):
         return ProductRequest(
             id=self.name,
             name=self.name,
-            amount=self.amount.amount,
-            measurement=Measurement(self.amount.type),
+            number=self.amount.amount,
+            measurement=Measure(self.amount.type),
             category=Category.best_guess(self.category),
         )
 
