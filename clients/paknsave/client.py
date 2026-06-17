@@ -11,7 +11,12 @@ from pydantic import SecretStr
 from clients.clubplus import clubplus_authenticate
 from clients.paknsave.models import PaknSaveProduct, PaknSaveDirectProduct
 from core import log, USER_AGENT
-from models.product import PossibleProductResponse, ProductError, SaleType
+from models.product import (
+    PossibleProductResponse,
+    ProductError,
+    SaleType,
+    ProductRequest,
+)
 
 
 class _PaknSaveOAuth2Wrapper:
@@ -74,19 +79,21 @@ class PaknSaveClient:
     async def public_client(self):
         self.__client = await _PaknSaveOAuth2Wrapper().authenticate()
 
-    async def search(self, name_search: str) -> List[PossibleProductResponse]:
+    async def search(
+        self, product_request: ProductRequest
+    ) -> List[PossibleProductResponse]:
         async with self.__sem:
             if self.__store_id is None:
                 raise Exception("Store selection required.")
 
             response = await self.__client.post(
-                url=PaknSaveClient.__SEARCH_BASE.format(name_search),
+                url=PaknSaveClient.__SEARCH_BASE.format(product_request.name),
                 headers={
                     "user-agent": USER_AGENT,
                 },
                 json={
                     "algoliaQuery": {
-                        "query": name_search,
+                        "query": product_request.name,
                     },
                     "storeId": self.__store_id,
                     "hitsPerPage": 50,
@@ -103,7 +110,7 @@ class PaknSaveClient:
             for item in items:
                 try:
                     ps_product = PaknSaveProduct.model_validate(item)
-                    products.append(ps_product.to_product())
+                    products.append(ps_product.to_product(product_request))
                 except Exception as e:
                     products.append(
                         ProductError(

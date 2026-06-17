@@ -9,7 +9,7 @@ from pydantic import SecretStr
 
 from clients.woolworths.models import WoolworthsProduct
 from core import log, USER_AGENT
-from models.product import PossibleProductResponse, ProductError
+from models.product import PossibleProductResponse, ProductError, ProductRequest
 
 
 class WoolworthsClient:
@@ -17,7 +17,7 @@ class WoolworthsClient:
     __LOGIN_URL = "https://www.woolworths.co.nz/api/v1/bff/initiate-oidc-signin?redirectUrl=https%3A%2F%2Fwww.woolworths.co.nz%2F"
 
     def __init__(self):
-        self.__sem = asyncio.Semaphore(1)
+        self.__sem = asyncio.Semaphore(4)
 
     async def authenticated_client(self, username: str, password: SecretStr):
         log.info("Logging into Woolworths...")
@@ -61,18 +61,22 @@ class WoolworthsClient:
         )
         log.info("Logged into Woolworths.")
 
-    async def search(self, name_search: str) -> List[PossibleProductResponse]:
+    async def search(
+        self, product_request: ProductRequest
+    ) -> List[PossibleProductResponse]:
         async with self.__sem:
-            items = (
-                await self.__client.get(
-                    url=WoolworthsClient.__SEARCH_BASE.format(name_search),
-                    headers={
-                        "user-agent": USER_AGENT,
-                        "x-requested-with": "OnlineShopping.WebApp",
-                    },
-                    timeout=2,
-                )
-            ).json()["products"]["items"]
+            response = await self.__client.get(
+                url=WoolworthsClient.__SEARCH_BASE.format(product_request.name),
+                headers={
+                    "user-agent": USER_AGENT,
+                    "x-requested-with": "OnlineShopping.WebApp",
+                },
+                timeout=2,
+            )
+
+            response.raise_for_status()
+
+            items = response.json()["products"]["items"]
 
             products = []
 

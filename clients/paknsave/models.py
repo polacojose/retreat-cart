@@ -17,6 +17,7 @@ from models.product import (
     Value,
     SaleType,
     Amount,
+    ProductRequest,
 )
 
 # {
@@ -161,7 +162,7 @@ class PaknSaveProduct(BaseModel):
     variable_weight: Optional[VariableWeight] = None
     category_trees: Optional[List[dict[str, str]]] = None
 
-    def to_product(self) -> PossibleProductResponse:
+    def to_product(self, product_request: ProductRequest) -> PossibleProductResponse:
 
         try:
             name = (
