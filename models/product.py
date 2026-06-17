@@ -14,7 +14,6 @@ class Measure(str, Enum):
 
 
 class ProductBase(BaseModel):
-    id: str
     name: str
     category: Optional[Category]
 

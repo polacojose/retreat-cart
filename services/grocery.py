@@ -1,6 +1,5 @@
-from core import APP_CONFIG
-import time
 import asyncio
+import time
 import uuid
 from enum import Enum
 from typing import Annotated, Any, List, Literal, Protocol, Self, Union, cast
@@ -10,9 +9,14 @@ from pydantic import BaseModel, Field, SecretStr, TypeAdapter
 
 from clients.paknsave.client import PaknSaveClient
 from clients.woolworths.client import WoolworthsClient
-from models.category import Category
-from models.grocery import GroceryStore, AddToCartItem
-from models.product import PossibleProductResponse, ProductError, ProductResponse
+from core import APP_CONFIG, log
+from models.grocery import AddToCartItem, GroceryStore
+from models.product import (
+    PossibleProductResponse,
+    ProductError,
+    ProductRequest,
+    ProductResponse,
+)
 
 
 class GroceryChainClient(Protocol):
@@ -26,7 +30,10 @@ class GroceryChainClient(Protocol):
         _ = grocery_store_id
         raise Exception("Grocery Store selection not supported.")
 
-    async def search(self, name_search: str) -> List[PossibleProductResponse]: ...
+    async def search(
+        self, product_request: ProductRequest
+    ) -> List[PossibleProductResponse]: ...
+
     async def add_to_cart(self, items: List[AddToCartItem]): ...
 
     async def close(self): ...
@@ -102,32 +109,39 @@ class GroceryChainSessionCacher:
 
 
 class GroceryStoreService:
-    __grocery_store: GroceryChainClient
+    __grocery_chain: GroceryChainClient
 
     def __init__(self, grocery_store: GroceryChainClient):
-        self.__grocery_store = grocery_store
+        self.__grocery_chain = grocery_store
 
     async def stores(self) -> List[GroceryStore]:
-        return await self.__grocery_store.stores()
+        return await self.__grocery_chain.stores()
 
     async def select_store(self, grocery_store_id: str):
-        return await self.__grocery_store.select_store(grocery_store_id)
+        return await self.__grocery_chain.select_store(grocery_store_id)
 
     async def search(
-        self, name_search: str, category: Category | None = None
+        self, product_request: ProductRequest
     ) -> List[PossibleProductResponse]:
-        products = await self.__grocery_store.search(name_search)
-        if category is not None:
-            products = [
-                p
-                for p in products
-                if isinstance(p, ProductError)
-                or (isinstance(p, ProductResponse) and p.category == category)
-            ]
-        return products
+        try:
+            products = await self.__grocery_chain.search(product_request)
+            if product_request.category is not None:
+                products = [
+                    p
+                    for p in products
+                    if isinstance(p, ProductError)
+                    or (
+                        isinstance(p, ProductResponse)
+                        and p.category == product_request.category
+                    )
+                ]
+            return products
+        except Exception as e:
+            log.error(f"Unable to perform search: {e}")
+            raise e
 
     async def add_to_cart(self, items: List[AddToCartItem]):
-        await self.__grocery_store.add_to_cart(items)
+        await self.__grocery_chain.add_to_cart(items)
 
     async def __aenter__(self) -> Self:
         return self

@@ -1,8 +1,8 @@
-from typing import Callable, Optional, Coroutine, Any
+from typing import Any, Callable, Coroutine, Optional
 from urllib.parse import quote_plus, urlparse
 
 import httpx
-from playwright.async_api import async_playwright, Page
+from playwright.async_api import async_playwright
 from playwright_stealth.stealth import Stealth
 from pydantic import SecretStr
 

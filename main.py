@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field, SecretStr
 from clients.retreat.client import RetreatManagerClient
 from clients.retreat.models import Retreat
 from core import log
-from models.category import Category
 from models.grocery import AddToCartItem
 from models.product import PossibleProductResponse, ProductRequest
 from services.grocery import (
@@ -109,12 +108,16 @@ async def add_shopping_list_to_cart(
         async with GroceryStoreService(
             grocery_chain_cacher.get_session(grocery_chain_session_id)
         ) as service:
-            async with asyncio.TaskGroup() as tg:
-                tasks = []
-                for item in shopping_list:
-                    tasks.append(tg.create_task(service.search(item.name)))
+            try:
+                async with asyncio.TaskGroup() as tg:
+                    tasks = []
+                    for item in shopping_list:
+                        tasks.append(tg.create_task(service.search(item)))
+            except* Exception as e:
+                print(f"Do nothing: {e}")
 
-        return [t.result()[0] for t in tasks]
+        # return [result[0] for t.result() in tasks if len(result := t.result()) > 0]
+        return []
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to search results: {e}")
 
@@ -199,21 +202,20 @@ async def grocery_add_item_to_cart(
         )
 
 
-@app.get("/grocery/search", tags=[Tags.Grocery])
+@app.post("/grocery/search", tags=[Tags.Grocery])
 async def grocery_search(
-    product_name: str,
+    product_request: ProductRequest,
     grocery_chain_session_id: uuid.UUID,
-    category: Optional[Category] = None,
 ) -> List[PossibleProductResponse]:
     """Searching the grocery store for the specified items."""
 
     try:
-        log.info(f"Searching grocery store for {product_name}...")
+        log.info(f"Searching grocery store for {product_request.name}...")
 
         async with GroceryStoreService(
             grocery_chain_cacher.get_session(grocery_chain_session_id)
         ) as service:
-            return await service.search(product_name, category)
+            return await service.search(product_request)
 
     except Exception as e:
         raise HTTPException(
