@@ -162,7 +162,9 @@ class PaknSaveProduct(BaseModel):
     variable_weight: Optional[VariableWeight] = None
     category_trees: Optional[List[dict[str, str]]] = None
 
-    def to_product(self, product_request: ProductRequest) -> PossibleProductResponse:
+    def to_product(
+        self, product_request: Optional[ProductRequest] = None
+    ) -> PossibleProductResponse:
 
         try:
             name = (

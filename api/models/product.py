@@ -61,6 +61,7 @@ class SaleType(str, Enum):
 
 
 class ProductResponse(ProductBase):
+    id: str
     cost_per_unit: float
     """In dollars."""
     value: Optional[Value] = None
