@@ -12,13 +12,13 @@ anyio==4.13.0
     #   starlette
     #   watchfiles
 asyncio==4.0.0
-    # via retreat-cart
+    # via retreat-cart-api
 authlib==1.7.2
-    # via retreat-cart
+    # via retreat-cart-api
 beautifulsoup4==4.14.3
     # via bs4
 bs4==0.0.2
-    # via retreat-cart
+    # via retreat-cart-api
 certifi==2026.5.20
     # via
     #   httpcore
@@ -51,7 +51,7 @@ email-validator==2.3.0
     #   fastapi
     #   pydantic
 fastapi==0.136.3
-    # via retreat-cart
+    # via retreat-cart-api
 fastapi-cli==0.0.24
     # via fastapi
 fastapi-cloud-cli==0.18.0
@@ -74,7 +74,7 @@ httpx==0.28.1
     # via
     #   fastapi
     #   fastapi-cloud-cli
-    #   retreat-cart
+    #   retreat-cart-api
 idna==3.16
     # via
     #   anyio
@@ -97,7 +97,7 @@ markupsafe==3.0.3
 mdurl==0.1.2
     # via markdown-it-py
 nltk==3.9.4
-    # via retreat-cart
+    # via retreat-cart-api
 numpy==2.4.6
     # via
     #   scikit-learn
@@ -107,9 +107,9 @@ packaging==26.2
 playwright==1.60.0
     # via
     #   playwright-stealth
-    #   retreat-cart
+    #   retreat-cart-api
 playwright-stealth==2.0.3
-    # via retreat-cart
+    # via retreat-cart-api
 pluggy==1.6.0
     # via pytest
 pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'
@@ -120,7 +120,7 @@ pydantic==2.13.4
     #   fastapi-cloud-cli
     #   pydantic-extra-types
     #   pydantic-settings
-    #   retreat-cart
+    #   retreat-cart-api
 pydantic-core==2.46.4
     # via pydantic
 pydantic-extra-types==2.11.1
@@ -128,7 +128,7 @@ pydantic-extra-types==2.11.1
 pydantic-settings==2.14.1
     # via
     #   fastapi
-    #   retreat-cart
+    #   retreat-cart-api
 pyee==13.0.1
     # via playwright
 pygments==2.20.0
@@ -139,7 +139,7 @@ pytest==9.0.3
 python-dotenv==1.2.2
     # via
     #   pydantic-settings
-    #   retreat-cart
+    #   retreat-cart-api
     #   uvicorn
 python-multipart==0.0.29
     # via fastapi
@@ -158,7 +158,7 @@ rich-toolkit==0.19.10
 rignore==0.7.6
     # via fastapi-cloud-cli
 scikit-learn==1.8.0
-    # via retreat-cart
+    # via retreat-cart-api
 scipy==1.17.1
     # via scikit-learn
 sentry-sdk==2.60.0
