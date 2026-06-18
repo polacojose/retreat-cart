@@ -78,7 +78,6 @@ class RetreatManagerClient:
         await self.__client.post(
             "https://retreatman.nztim.com/login",
             data={
-                "_token": "4ocbxT3x3qJA85wm1IwdFCWjbXCJY8gLGkGcUYBK",
                 "email": str(APP_CONFIG.retreat_email),
                 "password": str(APP_CONFIG.retreat_password),
                 "remember": 1,
